@@ -7,7 +7,7 @@ import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/compo
 import {format, differenceInMonths} from "date-fns";
 import {AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger} from "@/components/ui/alert-dialog";
 import {Button} from "@/components/ui/button";
-import {Edit, Plus, Trash, UserPlus} from "lucide-react";
+import {Edit, Trash, UserPlus} from "lucide-react";
 import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger} from "@/components/ui/dialog";
 import {z} from "zod";
 import {toast} from "@/hooks/use-toast";
@@ -34,6 +34,7 @@ interface VaccinationRecord {
     batchNumber?: string;
     notes?: string;
     id: string;
+    babyId: string;
 }
 
 interface BabyProfile {
@@ -42,7 +43,7 @@ interface BabyProfile {
     birthDate: Date;
 }
 
-const ADD_BABY_FORM_SCHEMA = z.object({
+const AddBabyFormSchema = z.object({
     name: z.string().min(2, {
         message: "Bebek adı en az 2 karakter olmalıdır.",
     }),
@@ -52,22 +53,22 @@ const ADD_BABY_FORM_SCHEMA = z.object({
 })
 
 interface AddBabyFormProps {
-    onSubmit: (values: z.infer<typeof ADD_BABY_FORM_SCHEMA>) => void;
-    initialValues?: Partial<z.infer<typeof ADD_BABY_FORM_SCHEMA>>;
+    onSubmit: (values: z.infer<typeof AddBabyFormSchema>) => void;
+    initialValues?: Partial<z.infer<typeof AddBabyFormSchema>>;
 }
 
 function AddBabyForm({onSubmit, initialValues}: AddBabyFormProps) {
     const [open, setOpen] = useState(false);
 
-    const form = useForm<z.infer<typeof ADD_BABY_FORM_SCHEMA>>({
-        resolver: zodResolver(ADD_BABY_FORM_SCHEMA),
+    const form = useForm<z.infer<typeof AddBabyFormSchema>>({
+        resolver: zodResolver(AddBabyFormSchema),
         defaultValues: initialValues || {
             name: "",
             birthDate: new Date(),
         },
     })
 
-    function handleBabySubmit(values: z.infer<typeof ADD_BABY_FORM_SCHEMA>) {
+    function handleBabySubmit(values: z.infer<typeof AddBabyFormSchema>) {
         onSubmit(values);
         form.reset();
     }
@@ -152,14 +153,6 @@ const VaccinationTimeline = () => {
 
     useEffect(() => {
         // Load data from localStorage on component mount
-        const storedVaccinationRecords = localStorage.getItem('vaccinationRecords');
-        if (storedVaccinationRecords) {
-            setVaccinationRecords(JSON.parse(storedVaccinationRecords).map((record: any) => ({
-                ...record,
-                date: new Date(record.date),
-            })));
-        }
-
         const storedBabyProfiles = localStorage.getItem('babyProfiles');
         if (storedBabyProfiles) {
             setBabyProfiles(JSON.parse(storedBabyProfiles).map((profile: any) => ({
@@ -175,11 +168,6 @@ const VaccinationTimeline = () => {
     }, []);
 
     useEffect(() => {
-        // Save data to localStorage whenever vaccinationRecords changes
-        localStorage.setItem('vaccinationRecords', JSON.stringify(vaccinationRecords));
-    }, [vaccinationRecords]);
-
-    useEffect(() => {
         // Save data to localStorage whenever babyProfiles changes
         localStorage.setItem('babyProfiles', JSON.stringify(babyProfiles));
     }, [babyProfiles]);
@@ -187,7 +175,29 @@ const VaccinationTimeline = () => {
     useEffect(() => {
         // Save data to localStorage whenever selectedBaby changes
         localStorage.setItem('selectedBaby', JSON.stringify(selectedBaby));
+
+        // Load vaccination records for the selected baby
+        if (selectedBaby) {
+            const storedVaccinationRecords = localStorage.getItem(`vaccinationRecords-${selectedBaby.id}`);
+            if (storedVaccinationRecords) {
+                setVaccinationRecords(JSON.parse(storedVaccinationRecords).map((record: any) => ({
+                    ...record,
+                    date: new Date(record.date),
+                })));
+            } else {
+                setVaccinationRecords([]); // Initialize to empty array if no records found
+            }
+        } else {
+            setVaccinationRecords([]); // Clear records if no baby is selected
+        }
     }, [selectedBaby]);
+
+    useEffect(() => {
+        if (selectedBaby) {
+            // Save data to localStorage whenever vaccinationRecords changes, scoped to the selected baby
+            localStorage.setItem(`vaccinationRecords-${selectedBaby.id}`, JSON.stringify(vaccinationRecords));
+        }
+    }, [vaccinationRecords, selectedBaby]);
 
 
     useEffect(() => {
@@ -208,7 +218,7 @@ const VaccinationTimeline = () => {
         }
     }, [selectedBaby]);
 
-    const addVaccinationRecord = (record: Omit<VaccinationRecord, "id">) => {
+    const addVaccinationRecord = (record: Omit<VaccinationRecord, "id" | "babyId">) => {
         if (!selectedBaby) {
             toast({
                 title: "Hata",
@@ -217,7 +227,7 @@ const VaccinationTimeline = () => {
             });
             return;
         }
-        const newRecord = {...record, id: Date.now().toString()};
+        const newRecord = {...record, id: Date.now().toString(), babyId: selectedBaby.id};
         setVaccinationRecords([...vaccinationRecords, newRecord]);
         toast({
             title: "Başarılı",
@@ -251,7 +261,7 @@ const VaccinationTimeline = () => {
         setIsEditDialogOpen(true);
     };
 
-    const handleAddBaby = (newBabyValues: z.infer<typeof ADD_BABY_FORM_SCHEMA>) => {
+    const handleAddBaby = (newBabyValues: z.infer<typeof AddBabyFormSchema>) => {
         const newBaby: BabyProfile = {
             id: Date.now().toString(),
             name: newBabyValues.name,
@@ -317,7 +327,7 @@ const VaccinationTimeline = () => {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         {vaccinationRecords
-                            .filter(record => selectedBaby && true)
+                            .filter(record => selectedBaby && record.babyId === selectedBaby.id)
                             .sort((a, b) => a.date.getTime() - b.date.getTime())
                             .map((record) => (
                                 <div key={record.id} className="border rounded-md p-4">
@@ -414,6 +424,7 @@ const VaccinationTimeline = () => {
                                 batchNumber: values.batchNumber,
                                 notes: values.notes,
                                 id: selectedRecord.id,
+                                babyId: selectedRecord.babyId,
                             })}
                             vaccinationOptions={vaccinationSchedule}
                         />
