@@ -49,10 +49,10 @@ const initialBabyProfiles: BabyProfile[] = [
 
 const AddBabyFormSchema = z.object({
     name: z.string().min(2, {
-        message: "Baby name must be at least 2 characters.",
+        message: "Bebek adı en az 2 karakter olmalıdır.",
     }),
     birthDate: z.date({
-        required_error: "A date of birth is required.",
+        required_error: "Bir doğum tarihi gereklidir.",
     }),
 })
 
@@ -85,12 +85,12 @@ function AddBabyForm({onSubmit, initialValues}: AddBabyFormProps) {
                     name="name"
                     render={({field}) => (
                         <FormItem>
-                            <FormLabel>Baby name</FormLabel>
+                            <FormLabel>Bebek adı</FormLabel>
                             <FormControl>
-                                <Input placeholder="Enter baby name" {...field} />
+                                <Input placeholder="Bebek adını girin" {...field} />
                             </FormControl>
                             <FormDescription>
-                                Enter the name of the baby.
+                                Bebeğin adını girin.
                             </FormDescription>
                             <FormMessage/>
                         </FormItem>
@@ -101,7 +101,7 @@ function AddBabyForm({onSubmit, initialValues}: AddBabyFormProps) {
                     name="birthDate"
                     render={({field}) => (
                         <FormItem className="flex flex-col">
-                            <FormLabel>Date of birth</FormLabel>
+                            <FormLabel>Doğum tarihi</FormLabel>
                             <Popover open={open} onOpenChange={setOpen}>
                                 <PopoverTrigger asChild>
                                     <FormControl>
@@ -115,7 +115,7 @@ function AddBabyForm({onSubmit, initialValues}: AddBabyFormProps) {
                                             {field.value ? (
                                                 format(field.value, "PPP")
                                             ) : (
-                                                <span>Pick a date</span>
+                                                <span>Bir tarih seçin</span>
                                             )}
                                         </Button>
                                     </FormControl>
@@ -133,13 +133,13 @@ function AddBabyForm({onSubmit, initialValues}: AddBabyFormProps) {
                                 </PopoverContent>
                             </Popover>
                             <FormDescription>
-                                Enter the date of birth of the baby.
+                                Bebeğin doğum tarihini girin.
                             </FormDescription>
                             <FormMessage/>
                         </FormItem>
                     )}
                 />
-                <Button type="submit">Submit</Button>
+                <Button type="submit">Kaydet</Button>
             </form>
         </Form>
     )
@@ -163,8 +163,8 @@ const VaccinationTimeline = () => {
                 .catch(error => {
                     console.error("Failed to fetch vaccination schedule", error);
                     toast({
-                        title: "Error",
-                        description: "Failed to load vaccination schedule for the selected baby.",
+                        title: "Hata",
+                        description: "Seçilen bebek için aşılama takvimi yüklenemedi.",
                         variant: "destructive",
                     });
                 });
@@ -176,8 +176,8 @@ const VaccinationTimeline = () => {
     const addVaccinationRecord = (record: Omit<VaccinationRecord, "id">) => {
         if (!selectedBaby) {
             toast({
-                title: "Error",
-                description: "Please select a baby profile first.",
+                title: "Hata",
+                description: "Lütfen önce bir bebek profili seçin.",
                 variant: "destructive",
             });
             return;
@@ -185,8 +185,8 @@ const VaccinationTimeline = () => {
         const newRecord = {...record, id: Date.now().toString()};
         setVaccinationRecords([...vaccinationRecords, newRecord]);
         toast({
-            title: "Success",
-            description: "Added record successfully!",
+            title: "Başarılı",
+            description: "Kayıt başarıyla eklendi!",
         })
     };
 
@@ -198,16 +198,16 @@ const VaccinationTimeline = () => {
         );
         setIsEditDialogOpen(false);
         toast({
-            title: "Success",
-            description: "Edited record successfully!",
+            title: "Başarılı",
+            description: "Kayıt başarıyla düzenlendi!",
         })
     };
 
     const deleteVaccinationRecord = (id: string) => {
         setVaccinationRecords(vaccinationRecords.filter((record) => record.id !== id));
         toast({
-            title: "Success",
-            description: "Deleted record successfully!",
+            title: "Başarılı",
+            description: "Kayıt başarıyla silindi!",
         })
     };
 
@@ -239,11 +239,11 @@ const VaccinationTimeline = () => {
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between">
                         <div>
-                            <CardTitle>Vaccination Timeline</CardTitle>
+                            <CardTitle>Aşılama Takvimi</CardTitle>
                             <CardDescription>
                                 {selectedBaby ?
-                                    `List of recorded vaccinations for ${selectedBaby.name} (born on ${format(selectedBaby.birthDate, "PPP")})` :
-                                    "No baby selected. Please add a baby profile."}
+                                    `${selectedBaby.name} adlı bebeğin (${format(selectedBaby.birthDate, "PPP")} tarihinde doğdu) kaydedilen aşılarının listesi` :
+                                    "Bebek seçilmedi. Lütfen bir bebek profili ekleyin."}
                             </CardDescription>
                         </div>
                         <div>
@@ -251,14 +251,14 @@ const VaccinationTimeline = () => {
                                 <DialogTrigger asChild>
                                     <Button variant="outline">
                                         <UserPlus className="mr-2 h-4 w-4"/>
-                                        Add Baby
+                                        Bebek Ekle
                                     </Button>
                                 </DialogTrigger>
                                 <DialogContent className="sm:max-w-[425px]">
                                     <DialogHeader>
-                                        <DialogTitle>Add New Baby Profile</DialogTitle>
+                                        <DialogTitle>Yeni Bebek Profili Ekle</DialogTitle>
                                         <DialogDescription>
-                                            Create a profile for a new baby to track vaccinations.
+                                            Aşıları takip etmek için yeni bir bebek profili oluşturun.
                                         </DialogDescription>
                                     </DialogHeader>
                                     <AddBabyForm onSubmit={handleAddBaby} />
@@ -270,12 +270,12 @@ const VaccinationTimeline = () => {
                             }}
                                     defaultValue={selectedBaby?.id}>
                                 <SelectTrigger className="w-[180px]">
-                                    <SelectValue placeholder="Select baby"/>
+                                    <SelectValue placeholder="Bebek Seç"/>
                                 </SelectTrigger>
                                 <SelectContent>
                                     {babyProfiles.map((baby) => (
                                         <SelectItem key={baby.id} value={baby.id}>
-                                            {baby.name} (Born on {format(baby.birthDate, "PPP")})
+                                            {baby.name} ({format(baby.birthDate, "PPP")} tarihinde doğdu)
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
@@ -307,26 +307,26 @@ const VaccinationTimeline = () => {
                                                 </AlertDialogTrigger>
                                                 <AlertDialogContent>
                                                     <AlertDialogHeader>
-                                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                        <AlertDialogTitle>Emin misiniz?</AlertDialogTitle>
                                                         <AlertDialogDescription>
-                                                            This action cannot be undone. This will permanently delete this vaccination record from our servers.
+                                                            Bu işlem geri alınamaz. Bu aşılama kaydı sunucularımızdan kalıcı olarak silinecektir.
                                                         </AlertDialogDescription>
                                                     </AlertDialogHeader>
                                                     <AlertDialogFooter>
-                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                        <AlertDialogCancel>İptal</AlertDialogCancel>
                                                         <Button
                                                             variant="destructive"
                                                             onClick={() => deleteVaccinationRecord(record.id)}
                                                         >
-                                                            Delete
+                                                            Sil
                                                         </Button>
                                                     </AlertDialogFooter>
                                                 </AlertDialogContent>
                                             </AlertDialog>
                                         </div>
                                     </div>
-                                    <p className="text-sm mt-2">Batch: {record.batchNumber || "N/A"}</p>
-                                    <p className="text-sm mt-1">Notes: {record.notes || "None"}</p>
+                                    <p className="text-sm mt-2">Parti: {record.batchNumber || "Yok"}</p>
+                                    <p className="text-sm mt-1">Notlar: {record.notes || "Yok"}</p>
                                 </div>
                             ))}
                     </CardContent>
@@ -337,8 +337,8 @@ const VaccinationTimeline = () => {
             <div className="w-full md:w-1/3 p-4">
                 <Card>
                     <CardHeader>
-                        <CardTitle>Add New Vaccination</CardTitle>
-                        <CardDescription>Record a new vaccination for {selectedBaby?.name}</CardDescription>
+                        <CardTitle>Yeni Aşı Ekle</CardTitle>
+                        <CardDescription>{selectedBaby?.name} için yeni bir aşı kaydı girin</CardDescription>
                     </CardHeader>
                     <CardContent>
                         {selectedBaby ? (
@@ -354,7 +354,7 @@ const VaccinationTimeline = () => {
                                 vaccinationOptions={vaccinationSchedule}
                             />
                         ) : (
-                            <p>Please select or add a baby profile to record vaccinations.</p>
+                            <p>Aşıları kaydetmek için lütfen bir bebek profili seçin veya ekleyin.</p>
                         )}
                     </CardContent>
                 </Card>
@@ -362,9 +362,9 @@ const VaccinationTimeline = () => {
             <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Edit Vaccination Record</DialogTitle>
+                        <DialogTitle>Aşı Kaydını Düzenle</DialogTitle>
                         <DialogDescription>
-                            Make changes to vaccination records here. Click save when you're done.
+                            Aşı kayıtlarında değişiklik yapın. İşiniz bittiğinde kaydedin.
                         </DialogDescription>
                     </DialogHeader>
                     {selectedRecord ? (

@@ -25,10 +25,10 @@ import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/c
 
 const FormSchema = z.object({
     vaccineName: z.string().min(2, {
-        message: "Vaccine name must be at least 2 characters.",
+        message: "Aşı adı en az 2 karakter olmalıdır.",
     }),
     date: z.date({
-        required_error: "A date of birth is required.",
+        required_error: "Bir doğum tarihi gereklidir.",
     }),
     batchNumber: z.string().optional(),
     notes: z.string().optional(),
@@ -67,11 +67,11 @@ export function VaccinationRecordForm({onSubmit, initialValues, vaccinationOptio
                     name="vaccineName"
                     render={({field}) => (
                         <FormItem>
-                            <FormLabel>Vaccine name</FormLabel>
+                            <FormLabel>Aşı adı</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl>
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Select a vaccine"/>
+                                        <SelectValue placeholder="Bir aşı seçin"/>
                                     </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
@@ -83,7 +83,7 @@ export function VaccinationRecordForm({onSubmit, initialValues, vaccinationOptio
                                 </SelectContent>
                             </Select>
                             <FormDescription>
-                                Select the name of the vaccine.
+                                Aşının adını seçin.
                             </FormDescription>
                             <FormMessage/>
                         </FormItem>
@@ -94,7 +94,7 @@ export function VaccinationRecordForm({onSubmit, initialValues, vaccinationOptio
                     name="date"
                     render={({field}) => (
                         <FormItem className="flex flex-col">
-                            <FormLabel>Date of vaccination</FormLabel>
+                            <FormLabel>Aşılama tarihi</FormLabel>
                             <Popover open={open} onOpenChange={setOpen}>
                                 <PopoverTrigger asChild>
                                     <FormControl>
@@ -108,7 +108,7 @@ export function VaccinationRecordForm({onSubmit, initialValues, vaccinationOptio
                                             {field.value ? (
                                                 format(field.value, "PPP")
                                             ) : (
-                                                <span>Pick a date</span>
+                                                <span>Bir tarih seçin</span>
                                             )}
                                         </Button>
                                     </FormControl>
@@ -126,7 +126,7 @@ export function VaccinationRecordForm({onSubmit, initialValues, vaccinationOptio
                                 </PopoverContent>
                             </Popover>
                             <FormDescription>
-                                Enter the date when vaccination was given.
+                                Aşının yapıldığı tarihi girin.
                             </FormDescription>
                             <FormMessage/>
                         </FormItem>
@@ -137,12 +137,12 @@ export function VaccinationRecordForm({onSubmit, initialValues, vaccinationOptio
                     name="batchNumber"
                     render={({field}) => (
                         <FormItem>
-                            <FormLabel>Batch number</FormLabel>
+                            <FormLabel>Parti numarası</FormLabel>
                             <FormControl>
-                                <Input placeholder="Enter batch number" {...field} />
+                                <Input placeholder="Parti numarasını girin" {...field} />
                             </FormControl>
                             <FormDescription>
-                                Enter the batch number of the vaccine.
+                                Aşının parti numarasını girin.
                             </FormDescription>
                             <FormMessage/>
                         </FormItem>
@@ -153,24 +153,25 @@ export function VaccinationRecordForm({onSubmit, initialValues, vaccinationOptio
                     name="notes"
                     render={({field}) => (
                         <FormItem>
-                            <FormLabel>Notes</FormLabel>
+                            <FormLabel>Notlar</FormLabel>
                             <FormControl>
                                 <Textarea
-                                    placeholder="Any additional notes?"
+                                    placeholder="Eklemek istediğiniz notlar var mı?"
                                     className="resize-none"
                                     {...field}
                                 />
                             </FormControl>
                             <FormDescription>
-                                Any additional notes to remember.
+                                Hatırlamak istediğiniz ek notlar.
                             </FormDescription>
                             <FormMessage/>
                         </FormItem>
                     )}
                 />
-                <Button type="submit">Submit</Button>
+                <Button type="submit">Kaydet</Button>
             </form>
         </Form>
     )
 }
+
 
