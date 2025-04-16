@@ -4,7 +4,7 @@ import {useState, useEffect, useCallback} from "react";
 import {VaccinationRecordForm} from "@/components/VaccinationRecordForm";
 import {VaccinationScheduleEntry, getVaccinationScheduleForAge} from "@/services/vaccination-schedule";
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
-import {format, differenceInMonths, isPast, isFuture} from "date-fns";
+import {format, differenceInMonths} from "date-fns";
 import {AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger} from "@/components/ui/alert-dialog";
 import {Button} from "@/components/ui/button";
 import {Edit, Trash, UserPlus} from "lucide-react";
@@ -142,89 +142,6 @@ function AddBabyForm({onSubmit, initialValues}: AddBabyFormProps) {
     )
 }
 
-interface VaccinationStatusDisplayProps {
-    selectedBaby: BabyProfile | null;
-    vaccinationSchedule: VaccinationScheduleEntry[];
-    vaccinationRecords: VaccinationRecord[];
-}
-
-const VaccinationStatusDisplay: React.FC<VaccinationStatusDisplayProps> = ({selectedBaby, vaccinationSchedule, vaccinationRecords}) => {
-    const [overdueVaccinationsList, setOverdueVaccinationsList] = useState<VaccinationScheduleEntry[]>([]);
-    const [upcomingVaccinationsList, setUpcomingVaccinationsList] = useState<VaccinationScheduleEntry[]>([]);
-    const ageInMonths = selectedBaby ? differenceInMonths(new Date(), selectedBaby.birthDate) : 0;
-
-    const calculateOverdueVaccinations = useCallback(() => {
-        if (!selectedBaby) return [];
-
-        const potentialVaccinations = vaccinationSchedule.filter(entry =>
-            ageInMonths > entry.maxAgeMonths
-        );
-
-        return potentialVaccinations.filter(vaccination => {
-            return !vaccinationRecords.find(record =>
-                record.vaccineName === vaccination.vaccineName && record.babyId === selectedBaby.id
-            );
-        });
-    }, [vaccinationSchedule, vaccinationRecords, selectedBaby, ageInMonths]);
-
-    const calculateUpcomingVaccinations = useCallback(() => {
-        if (!selectedBaby) return [];
-
-        const futureVaccinations = vaccinationSchedule.filter(entry =>
-            ageInMonths < entry.minAgeMonths
-        );
-
-        return futureVaccinations.filter(vaccination => {
-            return !vaccinationRecords.find(record =>
-                record.vaccineName === vaccination.vaccineName && record.babyId === selectedBaby.id
-            );
-        });
-    }, [vaccinationSchedule, vaccinationRecords, selectedBaby, ageInMonths]);
-
-    useEffect(() => {
-        if (selectedBaby) {
-            setOverdueVaccinationsList(calculateOverdueVaccinations());
-            setUpcomingVaccinationsList(calculateUpcomingVaccinations());
-        } else {
-            setOverdueVaccinationsList([]);
-            setUpcomingVaccinationsList([]);
-        }
-    }, [vaccinationSchedule, vaccinationRecords, selectedBaby, ageInMonths, calculateOverdueVaccinations, calculateUpcomingVaccinations]);
-
-    return (
-        <>
-            {selectedBaby && (
-                <>
-                    {overdueVaccinationsList.length > 0 && (
-                        <CardContent>
-                            <h3 className="text-red-500 font-semibold">Gecikmiş Aşılar:</h3>
-                            <ul className="list-disc pl-5">
-                                {overdueVaccinationsList.map((vaccine, index) => (
-                                    <li key={index} className="text-red-500">
-                                        {vaccine.vaccineName} - {vaccine.description}
-                                    </li>
-                                ))}
-                            </ul>
-                        </CardContent>
-                    )}
-                    {upcomingVaccinationsList.length > 0 && (
-                        <CardContent>
-                            <h3 className="text-green-500 font-semibold">Gelecek Aşılar:</h3>
-                            <ul className="list-disc pl-5">
-                                {upcomingVaccinationsList.map((vaccine, index) => (
-                                    <li key={index} className="text-green-500">
-                                        {vaccine.vaccineName} - {vaccine.description}
-                                    </li>
-                                ))}
-                            </ul>
-                        </CardContent>
-                    )}
-                </>
-            )}
-        </>
-    );
-};
-
 
 const VaccinationTimeline = () => {
     const [vaccinationRecords, setVaccinationRecords] = useState<VaccinationRecord[]>([]);
@@ -358,20 +275,6 @@ const VaccinationTimeline = () => {
         setSelectedBaby(baby || null);
     };
 
-    const handleShowVaccinationStatus = () => {
-        if (!selectedBaby) {
-            toast({
-                title: "Hata",
-                description: "Lütfen önce bir bebek profili seçin.",
-                variant: "destructive",
-            });
-            return;
-        }
-        setIsVaccinationStatusDialogOpen(true);
-    }
-
-
-
     return (
         <div className="flex flex-col md:flex-row min-h-screen bg-background">
             <div className="w-full md:w-2/3 p-4">
@@ -420,9 +323,13 @@ const VaccinationTimeline = () => {
                                     ))}
                                 </SelectContent>
                             </Select>
-                            <Button variant="secondary" onClick={handleShowVaccinationStatus}>
-                                Aşı Durumunu Göster
-                            </Button>
+                            {selectedBaby && (
+                                <VaccinationStatusButton
+                                    selectedBaby={selectedBaby}
+                                    vaccinationSchedule={vaccinationSchedule}
+                                    vaccinationRecords={vaccinationRecords}
+                                />
+                            )}
                         </div>
                     </CardHeader>
 
@@ -533,6 +440,30 @@ const VaccinationTimeline = () => {
                     ) : null}
                 </DialogContent>
             </Dialog>
+        </div>
+    );
+};
+
+export default VaccinationTimeline;
+
+interface VaccinationStatusButtonProps {
+    selectedBaby: BabyProfile;
+    vaccinationSchedule: VaccinationScheduleEntry[];
+    vaccinationRecords: VaccinationRecord[];
+}
+
+const VaccinationStatusButton: React.FC<VaccinationStatusButtonProps> = ({
+    selectedBaby,
+    vaccinationSchedule,
+    vaccinationRecords,
+}) => {
+    const [isVaccinationStatusDialogOpen, setIsVaccinationStatusDialogOpen] = useState(false);
+
+    return (
+        <>
+            <Button variant="secondary" onClick={() => setIsVaccinationStatusDialogOpen(true)}>
+                Aşı Durumunu Göster
+            </Button>
             <Dialog open={isVaccinationStatusDialogOpen} onOpenChange={setIsVaccinationStatusDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
@@ -541,19 +472,13 @@ const VaccinationTimeline = () => {
                             Gecikmiş ve gelecek aşılar.
                         </DialogDescription>
                     </DialogHeader>
-                    {selectedBaby ? (
-                        <VaccinationStatusDisplay
-                            selectedBaby={selectedBaby}
-                            vaccinationSchedule={vaccinationSchedule}
-                            vaccinationRecords={vaccinationRecords}
-                        />
-                    ) : (
-                        <p>Lütfen önce bir bebek profili seçin.</p>
-                    )}
+                    <VaccinationStatusDisplay
+                        selectedBaby={selectedBaby}
+                        vaccinationSchedule={vaccinationSchedule}
+                        vaccinationRecords={vaccinationRecords}
+                    />
                 </DialogContent>
             </Dialog>
-        </div>
+        </>
     );
 };
-
-export default VaccinationTimeline;
