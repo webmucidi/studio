@@ -248,7 +248,7 @@ const VaccinationTimeline = () => {
         if (storedSelectedBaby) {
             try {
                 const parsedBaby = JSON.parse(storedSelectedBaby);
-                if (parsedBaby === null) {
+                if (parsedBaby === null || parsedBaby === "null") {
                     setSelectedBaby(null);
                 } else {
                     setSelectedBaby(parsedBaby);
@@ -258,9 +258,6 @@ const VaccinationTimeline = () => {
                 setSelectedBaby(null);
             }
         } else {
-            setSelectedBaby(null);
-        }
-        if (!storedSelectedBaby) {
             setSelectedBaby(null);
         }
     }, []);
