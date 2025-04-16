@@ -141,6 +141,89 @@ function AddBabyForm({onSubmit, initialValues}: AddBabyFormProps) {
     )
 }
 
+interface VaccinationStatusProps {
+    selectedBaby: BabyProfile | null;
+    vaccinationSchedule: VaccinationScheduleEntry[];
+    vaccinationRecords: VaccinationRecord[];
+}
+
+const VaccinationStatus: React.FC<VaccinationStatusProps> = ({selectedBaby, vaccinationSchedule, vaccinationRecords}) => {
+    const [overdueVaccinationsList, setOverdueVaccinationsList] = useState<VaccinationScheduleEntry[]>([]);
+    const [upcomingVaccinationsList, setUpcomingVaccinationsList] = useState<VaccinationScheduleEntry[]>([]);
+    const ageInMonths = selectedBaby ? differenceInMonths(new Date(), selectedBaby.birthDate) : 0;
+
+    const calculateOverdueVaccinations = useCallback(() => {
+        if (!selectedBaby) return [];
+
+        // Filter the entire vaccination schedule to find entries that should have been administered by now
+        const potentialVaccinations = vaccinationSchedule.filter(entry =>
+            ageInMonths > entry.maxAgeMonths
+        );
+
+        // Filter out the potential vaccinations that have already been recorded
+        return potentialVaccinations.filter(vaccination => {
+            return !vaccinationRecords.find(record =>
+                record.vaccineName === vaccination.vaccineName && record.babyId === selectedBaby.id
+            );
+        });
+    }, [vaccinationSchedule, vaccinationRecords, selectedBaby, ageInMonths]);
+
+    const calculateUpcomingVaccinations = useCallback(() => {
+        if (!selectedBaby) return [];
+
+        // Filter the vaccination schedule for entries that are in the future
+        const futureVaccinations = vaccinationSchedule.filter(entry =>
+            ageInMonths < entry.minAgeMonths
+        );
+
+        // Filter out the future vaccinations that have already been recorded
+        return futureVaccinations.filter(vaccination => {
+            return !vaccinationRecords.find(record =>
+                record.vaccineName === vaccination.vaccineName && record.babyId === selectedBaby.id
+            );
+        });
+    }, [vaccinationSchedule, vaccinationRecords, selectedBaby, ageInMonths]);
+
+    useEffect(() => {
+        if (selectedBaby) {
+            setOverdueVaccinationsList(calculateOverdueVaccinations());
+            setUpcomingVaccinationsList(calculateUpcomingVaccinations());
+        } else {
+            setOverdueVaccinationsList([]);
+            setUpcomingVaccinationsList([]);
+        }
+    }, [selectedBaby, vaccinationSchedule, vaccinationRecords, calculateOverdueVaccinations, calculateUpcomingVaccinations, ageInMonths]);
+
+    return (
+        <>
+            {overdueVaccinationsList.length > 0 && (
+                <CardContent>
+                    <h3 className="text-red-500 font-semibold">Gecikmiş Aşılar:</h3>
+                    <ul className="list-disc pl-5">
+                        {overdueVaccinationsList.map((vaccine, index) => (
+                            <li key={index} className="text-red-500">
+                                {vaccine.vaccineName} - {vaccine.description}
+                            </li>
+                        ))}
+                    </ul>
+                </CardContent>
+            )}
+            {upcomingVaccinationsList.length > 0 && (
+                <CardContent>
+                    <h3 className="text-green-500 font-semibold">Gelecek Aşılar:</h3>
+                    <ul className="list-disc pl-5">
+                        {upcomingVaccinationsList.map((vaccine, index) => (
+                            <li key={index} className="text-green-500">
+                                {vaccine.vaccineName} - {vaccine.description}
+                            </li>
+                        ))}
+                    </ul>
+                </CardContent>
+            )}
+        </>
+    );
+};
+
 const VaccinationTimeline = () => {
     const [vaccinationRecords, setVaccinationRecords] = useState<VaccinationRecord[]>([]);
     const [babyProfiles, setBabyProfiles] = useState<BabyProfile[]>([]);
@@ -150,8 +233,6 @@ const VaccinationTimeline = () => {
     const [isAddBabyDialogOpen, setIsAddBabyDialogOpen] = useState(false);
     const [vaccinationSchedule, setVaccinationSchedule] = useState<VaccinationScheduleEntry[]>([]);
     const [isAddBabyFormOpen, setIsAddBabyFormOpen] = useState(false);
-    const [overdueVaccinationsList, setOverdueVaccinationsList] = useState<VaccinationScheduleEntry[]>([]);
-    const [upcomingVaccinationsList, setUpcomingVaccinationsList] = useState<VaccinationScheduleEntry[]>([]);
 
     useEffect(() => {
         // Load data from localStorage on component mount
@@ -177,6 +258,9 @@ const VaccinationTimeline = () => {
                 setSelectedBaby(null);
             }
         } else {
+            setSelectedBaby(null);
+        }
+        if (!storedSelectedBaby) {
             setSelectedBaby(null);
         }
     }, []);
@@ -220,7 +304,7 @@ const VaccinationTimeline = () => {
             getVaccinationScheduleForAge(ageInMonths)
                 .then(schedule => setVaccinationSchedule(schedule))
                 .catch(error => {
-                    console.error("Failed to fetch vaccination schedule", error);
+                    console.error("Aşılama takvimi alınamadı", error);
                     toast({
                         title: "Hata",
                         description: "Seçilen bebek için aşılama takvimi yüklenemedi.",
@@ -287,51 +371,6 @@ const VaccinationTimeline = () => {
         setIsAddBabyFormOpen(false); // Close the form after submission
     };
 
-    const ageInMonths = selectedBaby ? differenceInMonths(new Date(), selectedBaby.birthDate) : 0;
-
-    const calculateOverdueVaccinations = () => {
-        if (!selectedBaby) return [];
-
-        // Filter the entire vaccination schedule to find entries that should have been administered by now
-        const potentialVaccinations = vaccinationSchedule.filter(entry =>
-            ageInMonths > entry.maxAgeMonths
-        );
-
-        // Filter out the potential vaccinations that have already been recorded
-        return potentialVaccinations.filter(vaccination => {
-            return !vaccinationRecords.find(record =>
-                record.vaccineName === vaccination.vaccineName && record.babyId === selectedBaby.id
-            );
-        });
-    };
-
-    const calculateUpcomingVaccinations = () => {
-        if (!selectedBaby) return [];
-
-        // Filter the vaccination schedule for entries that are in the future
-        const futureVaccinations = vaccinationSchedule.filter(entry =>
-            ageInMonths < entry.minAgeMonths
-        );
-
-        // Filter out the future vaccinations that have already been recorded
-        return futureVaccinations.filter(vaccination => {
-            return !vaccinationRecords.find(record =>
-                record.vaccineName === vaccination.vaccineName && record.babyId === selectedBaby.id
-            );
-        });
-    };
-
-    useEffect(() => {
-        if (selectedBaby) {
-            setOverdueVaccinationsList(calculateOverdueVaccinations());
-            setUpcomingVaccinationsList(calculateUpcomingVaccinations());
-        } else {
-            setOverdueVaccinationsList([]);
-            setUpcomingVaccinationsList([]);
-        }
-    }, [vaccinationSchedule, vaccinationRecords, selectedBaby, ageInMonths]);
-
-
     return (
         <div className="flex flex-col md:flex-row min-h-screen bg-background">
             {/* Left Side: Vaccination Records Timeline */}
@@ -369,7 +408,7 @@ const VaccinationTimeline = () => {
                                     const baby = babyProfiles.find(profile => profile.id === value);
                                     setSelectedBaby(baby || null);
                                 }}
-                                defaultValue={selectedBaby?.id}
+                                value={selectedBaby?.id || ""}
                             >
                                 <SelectTrigger className="w-[180px]">
                                     <SelectValue placeholder="Bebek Seç"/>
@@ -384,6 +423,11 @@ const VaccinationTimeline = () => {
                             </Select>
                         </div>
                     </CardHeader>
+                    <VaccinationStatus
+                        selectedBaby={selectedBaby}
+                        vaccinationSchedule={vaccinationSchedule}
+                        vaccinationRecords={vaccinationRecords}
+                    />
                     <CardContent className="space-y-4">
                         {vaccinationRecords
                             .filter(record => selectedBaby && record.babyId === selectedBaby.id)
@@ -432,30 +476,6 @@ const VaccinationTimeline = () => {
                                 </div>
                             ))}
                     </CardContent>
-                    {overdueVaccinationsList.length > 0 && (
-                        <CardContent>
-                            <h3 className="text-red-500 font-semibold">Gecikmiş Aşılar:</h3>
-                            <ul className="list-disc pl-5">
-                                {overdueVaccinationsList.map((vaccine, index) => (
-                                    <li key={index} className="text-red-500">
-                                        {vaccine.vaccineName} - {vaccine.description}
-                                    </li>
-                                ))}
-                            </ul>
-                        </CardContent>
-                    )}
-                    {upcomingVaccinationsList.length > 0 && (
-                        <CardContent>
-                            <h3 className="text-green-500 font-semibold">Gelecek Aşılar:</h3>
-                            <ul className="list-disc pl-5">
-                                {upcomingVaccinationsList.map((vaccine, index) => (
-                                    <li key={index} className="text-green-500">
-                                        {vaccine.vaccineName} - {vaccine.description}
-                                    </li>
-                                ))}
-                            </ul>
-                        </CardContent>
-                    )}
                 </Card>
             </div>
 
