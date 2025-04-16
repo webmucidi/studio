@@ -173,3 +173,4 @@ export function VaccinationRecordForm({onSubmit, initialValues, vaccinationOptio
         </Form>
     )
 }
+

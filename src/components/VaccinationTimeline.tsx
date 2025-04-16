@@ -1,10 +1,10 @@
 "use client";
 
-import {useState} from "react";
+import {useState, useEffect} from "react";
 import {VaccinationRecordForm} from "@/components/VaccinationRecordForm";
-import {VaccinationScheduleEntry} from "@/services/vaccination-schedule";
+import {VaccinationScheduleEntry, getVaccinationScheduleForAge} from "@/services/vaccination-schedule";
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
-import {format} from "date-fns";
+import {format, differenceInMonths, isBefore} from "date-fns";
 import {AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger} from "@/components/ui/alert-dialog";
 import {Button} from "@/components/ui/button";
 import {Edit, Plus, Trash, UserPlus} from "lucide-react";
@@ -12,6 +12,20 @@ import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Dia
 import {z} from "zod";
 import {toast} from "@/hooks/use-toast";
 import {Input} from "@/components/ui/input";
+import {Calendar} from "@/components/ui/calendar";
+import {
+    Form,
+    FormControl,
+    FormDescription,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+} from "@/components/ui/form";
+import {Popover, PopoverContent, PopoverTrigger} from "@/components/ui/popover";
+import {cn} from "@/lib/utils";
+import {useForm} from "react-hook-form";
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 
 interface VaccinationRecord {
     vaccineName: string;
@@ -24,82 +38,149 @@ interface VaccinationRecord {
 interface BabyProfile {
     id: string;
     name: string;
+    birthDate: Date;
 }
 
-const initialVaccinationSchedule: VaccinationScheduleEntry[] = [
-    {
-        vaccineName: "BCG",
-        recommendedAgeMonths: 0,
-        description: "Protects against tuberculosis",
-    },
-    {
-        vaccineName: "Hepatitis B",
-        recommendedAgeMonths: 0,
-        description: "Protects against Hepatitis B virus",
-    },
-    {
-        vaccineName: "Polio",
-        recommendedAgeMonths: 2,
-        description: "Protects against poliomyelitis",
-    },
-    {
-        vaccineName: "DTaP",
-        recommendedAgeMonths: 2,
-        description: "Protects against Diphtheria, Tetanus, Pertussis",
-    },
-    {
-        vaccineName: "Hib",
-        recommendedAgeMonths: 2,
-        description: "Protects against Haemophilus influenzae type b",
-    },
-    {
-        vaccineName: "Pneumococcal",
-        recommendedAgeMonths: 2,
-        description: "Protects against pneumococcal diseases",
-    },
-];
-
-const initialVaccinationRecords: VaccinationRecord[] = [
-    {
-        vaccineName: "BCG",
-        date: new Date("2024-01-15"),
-        batchNumber: "AX123",
-        notes: "No side effects observed",
-        id: "1",
-    },
-    {
-        vaccineName: "Hepatitis B",
-        date: new Date("2024-01-15"),
-        batchNumber: "BX456",
-        notes: "Slight fever",
-        id: "2",
-    },
-    {
-        vaccineName: "Polio",
-        date: new Date("2024-03-15"),
-        batchNumber: "CX789",
-        notes: "Given orally",
-        id: "3",
-    },
-];
+const initialVaccinationRecords: VaccinationRecord[] = [];
 
 const initialBabyProfiles: BabyProfile[] = [
-    {
-        id: "1",
-        name: "Baby A",
-    },
 ];
+
+const AddBabyFormSchema = z.object({
+    name: z.string().min(2, {
+        message: "Baby name must be at least 2 characters.",
+    }),
+    birthDate: z.date({
+        required_error: "A date of birth is required.",
+    }),
+})
+
+interface AddBabyFormProps {
+    onSubmit: (values: z.infer<typeof AddBabyFormSchema>) => void;
+    initialValues?: Partial<z.infer<typeof AddBabyFormSchema>>;
+}
+
+function AddBabyForm({onSubmit, initialValues}: AddBabyFormProps) {
+    const [open, setOpen] = useState(false);
+
+    const form = useForm<z.infer<typeof AddBabyFormSchema>>({
+        resolver: zodResolver(AddBabyFormSchema),
+        defaultValues: initialValues || {
+            name: "",
+            birthDate: new Date(),
+        },
+    })
+
+    function handleBabySubmit(values: z.infer<typeof AddBabyFormSchema>) {
+        onSubmit(values);
+        form.reset();
+    }
+
+    return (
+        <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleBabySubmit)} className="space-y-4">
+                <FormField
+                    control={form.control}
+                    name="name"
+                    render={({field}) => (
+                        <FormItem>
+                            <FormLabel>Baby name</FormLabel>
+                            <FormControl>
+                                <Input placeholder="Enter baby name" {...field} />
+                            </FormControl>
+                            <FormDescription>
+                                Enter the name of the baby.
+                            </FormDescription>
+                            <FormMessage/>
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="birthDate"
+                    render={({field}) => (
+                        <FormItem className="flex flex-col">
+                            <FormLabel>Date of birth</FormLabel>
+                            <Popover open={open} onOpenChange={setOpen}>
+                                <PopoverTrigger asChild>
+                                    <FormControl>
+                                        <Button
+                                            variant={"outline"}
+                                            className={cn(
+                                                "w-[240px] pl-3 text-left font-normal",
+                                                !field.value && "text-muted-foreground"
+                                            )}
+                                        >
+                                            {field.value ? (
+                                                format(field.value, "PPP")
+                                            ) : (
+                                                <span>Pick a date</span>
+                                            )}
+                                        </Button>
+                                    </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar
+                                        mode="single"
+                                        selected={field.value}
+                                        onSelect={field.onChange}
+                                        disabled={(date) =>
+                                            date > new Date()
+                                        }
+                                        initialFocus
+                                    />
+                                </PopoverContent>
+                            </Popover>
+                            <FormDescription>
+                                Enter the date of birth of the baby.
+                            </FormDescription>
+                            <FormMessage/>
+                        </FormItem>
+                    )}
+                />
+                <Button type="submit">Submit</Button>
+            </form>
+        </Form>
+    )
+}
 
 const VaccinationTimeline = () => {
     const [vaccinationRecords, setVaccinationRecords] = useState<VaccinationRecord[]>(initialVaccinationRecords);
     const [babyProfiles, setBabyProfiles] = useState<BabyProfile[]>(initialBabyProfiles);
-    const [selectedBaby, setSelectedBaby] = useState<BabyProfile>(initialBabyProfiles[0]);
+    const [selectedBaby, setSelectedBaby] = useState<BabyProfile | null>(null);
     const [selectedRecord, setSelectedRecord] = useState<VaccinationRecord | null>(null);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [isAddBabyDialogOpen, setIsAddBabyDialogOpen] = useState(false);
-    const [newBabyName, setNewBabyName] = useState("");
+    const [vaccinationSchedule, setVaccinationSchedule] = useState<VaccinationScheduleEntry[]>([]);
+    const [isAddBabyFormOpen, setIsAddBabyFormOpen] = useState(false);
+
+    useEffect(() => {
+        if (selectedBaby) {
+            const ageInMonths = differenceInMonths(new Date(), selectedBaby.birthDate);
+            getVaccinationScheduleForAge(ageInMonths)
+                .then(schedule => setVaccinationSchedule(schedule))
+                .catch(error => {
+                    console.error("Failed to fetch vaccination schedule", error);
+                    toast({
+                        title: "Error",
+                        description: "Failed to load vaccination schedule for the selected baby.",
+                        variant: "destructive",
+                    });
+                });
+        } else {
+            setVaccinationSchedule([]);
+        }
+    }, [selectedBaby]);
 
     const addVaccinationRecord = (record: Omit<VaccinationRecord, "id">) => {
+        if (!selectedBaby) {
+            toast({
+                title: "Error",
+                description: "Please select a baby profile first.",
+                variant: "destructive",
+            });
+            return;
+        }
         const newRecord = {...record, id: Date.now().toString()};
         setVaccinationRecords([...vaccinationRecords, newRecord]);
         toast({
@@ -134,18 +215,21 @@ const VaccinationTimeline = () => {
         setIsEditDialogOpen(true);
     };
 
-    const handleAddBaby = () => {
-        if (newBabyName.trim() !== "") {
-            const newBaby: BabyProfile = {
-                id: Date.now().toString(),
-                name: newBabyName,
-            };
-            setBabyProfiles([...babyProfiles, newBaby]);
-            setSelectedBaby(newBaby);
-            setNewBabyName("");
-            setIsAddBabyDialogOpen(false);
-        }
+    const handleAddBaby = (newBabyValues: z.infer<typeof AddBabyFormSchema>) => {
+        const newBaby: BabyProfile = {
+            id: Date.now().toString(),
+            name: newBabyValues.name,
+            birthDate: newBabyValues.birthDate,
+        };
+        setBabyProfiles([...babyProfiles, newBaby]);
+        setSelectedBaby(newBaby);
+        setIsAddBabyDialogOpen(false);
+        setIsAddBabyFormOpen(false); // Close the form after submission
     };
+
+    const addBaby = () => {
+        setIsAddBabyFormOpen(true);
+    }
 
     return (
         <div className="flex flex-col md:flex-row min-h-screen bg-background">
@@ -155,90 +239,95 @@ const VaccinationTimeline = () => {
                     <CardHeader className="flex flex-row items-center justify-between">
                         <div>
                             <CardTitle>Vaccination Timeline</CardTitle>
-                            <CardDescription>List of recorded vaccinations for {selectedBaby.name}</CardDescription>
+                            <CardDescription>
+                                {selectedBaby ?
+                                    `List of recorded vaccinations for ${selectedBaby.name} (born on ${format(selectedBaby.birthDate, "PPP")})` :
+                                    "No baby selected. Please add a baby profile."}
+                            </CardDescription>
                         </div>
-                        <Dialog open={isAddBabyDialogOpen} onOpenChange={setIsAddBabyDialogOpen}>
-                            <DialogTrigger asChild>
-                                <Button variant="outline">
-                                    <UserPlus className="mr-2 h-4 w-4"/>
-                                    Add Baby
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent className="sm:max-w-[425px]">
-                                <DialogHeader>
-                                    <DialogTitle>Add New Baby Profile</DialogTitle>
-                                    <DialogDescription>
-                                        Create a profile for a new baby to track vaccinations.
-                                    </DialogDescription>
-                                </DialogHeader>
-                                <div className="grid gap-4 py-4">
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                        <label
-                                            htmlFor="name"
-                                            className="text-right text-sm font-medium leading-none text-foreground"
-                                        >
-                                            Name
-                                        </label>
-                                        <div className="col-span-3">
-                                            <Input
-                                                id="name"
-                                                value={newBabyName}
-                                                onChange={(e) => setNewBabyName(e.target.value)}
-                                                className="col-span-3"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                                <Button type="submit" onClick={handleAddBaby}>
-                                    Create Baby Profile
-                                </Button>
-                            </DialogContent>
-                        </Dialog>
+                        <div>
+                            <Dialog open={isAddBabyDialogOpen} onOpenChange={setIsAddBabyDialogOpen}>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline">
+                                        <UserPlus className="mr-2 h-4 w-4"/>
+                                        Add Baby
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="sm:max-w-[425px]">
+                                    <DialogHeader>
+                                        <DialogTitle>Add New Baby Profile</DialogTitle>
+                                        <DialogDescription>
+                                            Create a profile for a new baby to track vaccinations.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <AddBabyForm onSubmit={handleAddBaby} />
+                                </DialogContent>
+                            </Dialog>
+                            <Select onValueChange={(value) => {
+                                const baby = babyProfiles.find(profile => profile.id === value);
+                                setSelectedBaby(baby || null);
+                            }}
+                                    defaultValue={selectedBaby?.id}>
+                                <SelectTrigger className="w-[180px]">
+                                    <SelectValue placeholder="Select baby"/>
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {babyProfiles.map((baby) => (
+                                        <SelectItem key={baby.id} value={baby.id}>
+                                            {baby.name} (Born on {format(baby.birthDate, "PPP")})
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        {vaccinationRecords.sort((a, b) => a.date.getTime() - b.date.getTime()).map((record) => (
-                            <div key={record.id} className="border rounded-md p-4">
-                                <div className="flex justify-between items-center">
-                                    <div>
-                                        <h3 className="text-lg font-semibold">{record.vaccineName}</h3>
-                                        <p className="text-sm text-muted-foreground">
-                                            {format(record.date, "PPP")}
-                                        </p>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <Button size="icon" onClick={() => handleEditClick(record)}>
-                                            <Edit className="h-4 w-4"/>
-                                        </Button>
-                                        <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                                <Button variant="destructive" size="icon">
-                                                    <Trash className="h-4 w-4"/>
-                                                </Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                        This action cannot be undone. This will permanently delete this vaccination record from our servers.
-                                                    </AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                    <Button
-                                                        variant="destructive"
-                                                        onClick={() => deleteVaccinationRecord(record.id)}
-                                                    >
-                                                        Delete
+                        {vaccinationRecords
+                            .filter(record => selectedBaby && true)
+                            .sort((a, b) => a.date.getTime() - b.date.getTime())
+                            .map((record) => (
+                                <div key={record.id} className="border rounded-md p-4">
+                                    <div className="flex justify-between items-center">
+                                        <div>
+                                            <h3 className="text-lg font-semibold">{record.vaccineName}</h3>
+                                            <p className="text-sm text-muted-foreground">
+                                                {format(record.date, "PPP")}
+                                            </p>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Button size="icon" onClick={() => handleEditClick(record)}>
+                                                <Edit className="h-4 w-4"/>
+                                            </Button>
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="destructive" size="icon">
+                                                        <Trash className="h-4 w-4"/>
                                                     </Button>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            This action cannot be undone. This will permanently delete this vaccination record from our servers.
+                                                        </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                        <Button
+                                                            variant="destructive"
+                                                            onClick={() => deleteVaccinationRecord(record.id)}
+                                                        >
+                                                            Delete
+                                                        </Button>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </div>
                                     </div>
+                                    <p className="text-sm mt-2">Batch: {record.batchNumber || "N/A"}</p>
+                                    <p className="text-sm mt-1">Notes: {record.notes || "None"}</p>
                                 </div>
-                                <p className="text-sm mt-2">Batch: {record.batchNumber || "N/A"}</p>
-                                <p className="text-sm mt-1">Notes: {record.notes || "None"}</p>
-                            </div>
-                        ))}
+                            ))}
                     </CardContent>
                 </Card>
             </div>
@@ -248,20 +337,24 @@ const VaccinationTimeline = () => {
                 <Card>
                     <CardHeader>
                         <CardTitle>Add New Vaccination</CardTitle>
-                        <CardDescription>Record a new vaccination for {selectedBaby.name}</CardDescription>
+                        <CardDescription>Record a new vaccination for {selectedBaby?.name}</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <VaccinationRecordForm
-                            onSubmit={(values) => addVaccinationRecord(
-                                {
-                                    vaccineName: values.vaccineName,
-                                    date: values.date,
-                                    batchNumber: values.batchNumber,
-                                    notes: values.notes,
-                                }
-                            )}
-                            vaccinationOptions={initialVaccinationSchedule}
-                        />
+                        {selectedBaby ? (
+                            <VaccinationRecordForm
+                                onSubmit={(values) => addVaccinationRecord(
+                                    {
+                                        vaccineName: values.vaccineName,
+                                        date: values.date,
+                                        batchNumber: values.batchNumber,
+                                        notes: values.notes,
+                                    }
+                                )}
+                                vaccinationOptions={vaccinationSchedule}
+                            />
+                        ) : (
+                            <p>Please select or add a baby profile to record vaccinations.</p>
+                        )}
                     </CardContent>
                 </Card>
             </div>
@@ -288,7 +381,7 @@ const VaccinationTimeline = () => {
                                 notes: values.notes,
                                 id: selectedRecord.id,
                             })}
-                            vaccinationOptions={initialVaccinationSchedule}
+                            vaccinationOptions={vaccinationSchedule}
                         />
                     ) : null}
                 </DialogContent>
