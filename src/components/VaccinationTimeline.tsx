@@ -196,29 +196,33 @@ const VaccinationStatus: React.FC<VaccinationStatusProps> = ({selectedBaby, vacc
 
     return (
         <>
-            {overdueVaccinationsList.length > 0 && (
-                <CardContent>
-                    <h3 className="text-red-500 font-semibold">Gecikmiş Aşılar:</h3>
-                    <ul className="list-disc pl-5">
-                        {overdueVaccinationsList.map((vaccine, index) => (
-                            <li key={index} className="text-red-500">
-                                {vaccine.vaccineName} - {vaccine.description}
-                            </li>
-                        ))}
-                    </ul>
-                </CardContent>
-            )}
-            {upcomingVaccinationsList.length > 0 && (
-                <CardContent>
-                    <h3 className="text-green-500 font-semibold">Gelecek Aşılar:</h3>
-                    <ul className="list-disc pl-5">
-                        {upcomingVaccinationsList.map((vaccine, index) => (
-                            <li key={index} className="text-green-500">
-                                {vaccine.vaccineName} - {vaccine.description}
-                            </li>
-                        ))}
-                    </ul>
-                </CardContent>
+            {selectedBaby && (
+                <>
+                    {overdueVaccinationsList.length > 0 && (
+                        <CardContent>
+                            <h3 className="text-red-500 font-semibold">Gecikmiş Aşılar:</h3>
+                            <ul className="list-disc pl-5">
+                                {overdueVaccinationsList.map((vaccine, index) => (
+                                    <li key={index} className="text-red-500">
+                                        {vaccine.vaccineName} - {vaccine.description}
+                                    </li>
+                                ))}
+                            </ul>
+                        </CardContent>
+                    )}
+                    {upcomingVaccinationsList.length > 0 && (
+                        <CardContent>
+                            <h3 className="text-green-500 font-semibold">Gelecek Aşılar:</h3>
+                            <ul className="list-disc pl-5">
+                                {upcomingVaccinationsList.map((vaccine, index) => (
+                                    <li key={index} className="text-green-500">
+                                        {vaccine.vaccineName} - {vaccine.description}
+                                    </li>
+                                ))}
+                            </ul>
+                        </CardContent>
+                    )}
+                </>
             )}
         </>
     );
