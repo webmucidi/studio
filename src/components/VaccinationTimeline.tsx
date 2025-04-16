@@ -154,6 +154,7 @@ const VaccinationTimeline = () => {
     const [vaccinationSchedule, setVaccinationSchedule] = useState<VaccinationScheduleEntry[]>([]);
     const [isAddBabyFormOpen, setIsAddBabyFormOpen] = useState(false);
     const [showStatus, setShowStatus] = useState(false);
+    const [statusVisible, setStatusVisible] = useState(false); // State for status visibility
 
     useEffect(() => {
         const storedBabyProfiles = localStorage.getItem('babyProfiles');
@@ -162,17 +163,18 @@ const VaccinationTimeline = () => {
                 ...profile,
                 birthDate: new Date(profile.birthDate),
             })));
-           
+
         } else {
             setBabyProfiles([]);
 
         }
+        setSelectedBaby(null); // Initialize selectedBaby to null on component mount
     }, []);
 
     useEffect(() => {
-         if (babyProfiles.length > 0) {
-             localStorage.setItem('babyProfiles', JSON.stringify(babyProfiles));
-         }
+        if (babyProfiles.length > 0) {
+            localStorage.setItem('babyProfiles', JSON.stringify(babyProfiles));
+        }
     }, [babyProfiles]);
 
     useEffect(() => {
@@ -277,14 +279,14 @@ const VaccinationTimeline = () => {
     const handleSelectBaby = (babyId: string) => {
         const baby = babyProfiles.find(profile => profile.id === babyId);
         setSelectedBaby(baby || null);
-        setShowStatus(false); // Hide the status when a new baby is selected
+        setShowStatus(true); // Trigger status update when a baby is selected
     };
 
-    const ageInMonths = selectedBaby ? differenceInMonths(new Date(), selectedBaby.birthDate) : 0;
-
+    // Use useCallback to memoize calculateOverdueVaccinations and calculateUpcomingVaccinations
     const calculateOverdueVaccinations = useCallback(() => {
         if (!selectedBaby) return [];
 
+        const ageInMonths = differenceInMonths(new Date(), selectedBaby.birthDate);
         const potentialVaccinations = vaccinationSchedule.filter(entry =>
             ageInMonths > entry.maxAgeMonths
         );
@@ -294,11 +296,12 @@ const VaccinationTimeline = () => {
                 record.vaccineName === vaccination.vaccineName && record.babyId === selectedBaby.id
             );
         });
-    }, [vaccinationSchedule, vaccinationRecords, selectedBaby, ageInMonths]);
+    }, [vaccinationSchedule, vaccinationRecords, selectedBaby]);
 
     const calculateUpcomingVaccinations = useCallback(() => {
         if (!selectedBaby) return [];
 
+        const ageInMonths = differenceInMonths(new Date(), selectedBaby.birthDate);
         const futureVaccinations = vaccinationSchedule.filter(entry =>
             ageInMonths < entry.minAgeMonths
         );
@@ -308,31 +311,29 @@ const VaccinationTimeline = () => {
                 record.vaccineName === vaccination.vaccineName && record.babyId === selectedBaby.id
             );
         });
-    }, [vaccinationSchedule, vaccinationRecords, selectedBaby, ageInMonths]);
+    }, [vaccinationSchedule, vaccinationRecords, selectedBaby]);
 
     const overdueVaccinationsList = calculateOverdueVaccinations();
     const upcomingVaccinationsList = calculateUpcomingVaccinations();
 
-    // State to manage visibility of the vaccination status
-    const [statusVisible, setStatusVisible] = useState(false);
-
     useEffect(() => {
         let timeoutId: NodeJS.Timeout;
 
-        if (showStatus) {
+        if (showStatus && selectedBaby) {
             setStatusVisible(true);
             timeoutId = setTimeout(() => {
                 setStatusVisible(false);
                 setShowStatus(false);
-            }, 5000); // 5 seconds
+            }, 5000);
         }
 
-        return () => clearTimeout(timeoutId); // Clear timeout on unmount or update
-    }, [showStatus]);
+        return () => clearTimeout(timeoutId);
+    }, [showStatus, selectedBaby]);
 
     const toggleStatusVisibility = () => {
         setShowStatus(true);
     };
+
 
     return (
         (
@@ -383,8 +384,9 @@ const VaccinationTimeline = () => {
                                     ))}
                                 </SelectContent>
                             </Select>
+                            <Button onClick={toggleStatusVisibility} disabled={!selectedBaby}>Aşı Durumunu Göster</Button>
 
-                            <Button onClick={toggleStatusVisibility}>Aşı Durumunu Göster</Button>
+
                         </div>
                     </CardHeader>
 
@@ -532,4 +534,3 @@ const VaccinationTimeline = () => {
 };
 
 export default VaccinationTimeline;
-
