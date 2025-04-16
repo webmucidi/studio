@@ -324,16 +324,18 @@ const VaccinationTimeline = () => {
                                     ))}
                                 </SelectContent>
                             </Select>
-                            {selectedBaby && (
-                                <VaccinationStatusButton
-                                    selectedBaby={selectedBaby}
-                                    vaccinationSchedule={vaccinationSchedule}
-                                    vaccinationRecords={vaccinationRecords}
-                                />
-                            )}
                         </div>
                     </CardHeader>
 
+                    {selectedBaby && (
+                        <CardContent>
+                            <VaccinationStatusDisplay
+                                selectedBaby={selectedBaby}
+                                vaccinationSchedule={vaccinationSchedule}
+                                vaccinationRecords={vaccinationRecords}
+                            />
+                        </CardContent>
+                    )}
 
                     <CardContent className="space-y-4">
                         {vaccinationRecords
@@ -446,40 +448,3 @@ const VaccinationTimeline = () => {
 };
 
 export default VaccinationTimeline;
-
-interface VaccinationStatusButtonProps {
-    selectedBaby: BabyProfile;
-    vaccinationSchedule: VaccinationScheduleEntry[];
-    vaccinationRecords: VaccinationRecord[];
-}
-
-const VaccinationStatusButton: React.FC<VaccinationStatusButtonProps> = ({
-    selectedBaby,
-    vaccinationSchedule,
-    vaccinationRecords,
-}) => {
-    const [isVaccinationStatusDialogOpen, setIsVaccinationStatusDialogOpen] = useState(false);
-
-    return (
-        <>
-            <Button variant="secondary" onClick={() => setIsVaccinationStatusDialogOpen(true)}>
-                Aşı Durumunu Göster
-            </Button>
-            <Dialog open={isVaccinationStatusDialogOpen} onOpenChange={setIsVaccinationStatusDialogOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Aşı Durumu</DialogTitle>
-                        <DialogDescription>
-                            Gecikmiş ve gelecek aşılar.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <VaccinationStatusDisplay
-                        selectedBaby={selectedBaby}
-                        vaccinationSchedule={vaccinationSchedule}
-                        vaccinationRecords={vaccinationRecords}
-                    />
-                </DialogContent>
-            </Dialog>
-        </>
-    );
-};
