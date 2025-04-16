@@ -4,7 +4,7 @@ import {useState, useEffect} from "react";
 import {VaccinationRecordForm} from "@/components/VaccinationRecordForm";
 import {VaccinationScheduleEntry, getVaccinationScheduleForAge} from "@/services/vaccination-schedule";
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
-import {format, differenceInMonths, isPast} from "date-fns";
+import {format, differenceInMonths, isPast, isFuture} from "date-fns";
 import {AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger} from "@/components/ui/alert-dialog";
 import {Button} from "@/components/ui/button";
 import {Edit, Trash, UserPlus} from "lucide-react";
@@ -273,10 +273,10 @@ const VaccinationTimeline = () => {
         setIsAddBabyFormOpen(false); // Close the form after submission
     };
 
+    const ageInMonths = selectedBaby ? differenceInMonths(new Date(), selectedBaby.birthDate) : 0;
+
     const overdueVaccinations = () => {
         if (!selectedBaby) return [];
-
-        const ageInMonths = differenceInMonths(new Date(), selectedBaby.birthDate);
 
         // Filter the entire vaccination schedule to find entries that should have been administered by now
         const potentialVaccinations = vaccinationSchedule.filter(entry =>
@@ -285,6 +285,22 @@ const VaccinationTimeline = () => {
 
         // Filter out the potential vaccinations that have already been recorded
         return potentialVaccinations.filter(vaccination => {
+            return !vaccinationRecords.find(record =>
+                record.vaccineName === vaccination.vaccineName && record.babyId === selectedBaby.id
+            );
+        });
+    };
+
+    const upcomingVaccinations = () => {
+        if (!selectedBaby) return [];
+
+        // Filter the vaccination schedule for entries that are in the future
+        const futureVaccinations = vaccinationSchedule.filter(entry =>
+            ageInMonths < entry.minAgeMonths
+        );
+
+        // Filter out the future vaccinations that have already been recorded
+        return futureVaccinations.filter(vaccination => {
             return !vaccinationRecords.find(record =>
                 record.vaccineName === vaccination.vaccineName && record.babyId === selectedBaby.id
             );
@@ -397,6 +413,18 @@ const VaccinationTimeline = () => {
                             <ul className="list-disc pl-5">
                                 {overdueVaccinations().map((vaccine, index) => (
                                     <li key={index} className="text-red-500">
+                                        {vaccine.vaccineName} - {vaccine.description}
+                                    </li>
+                                ))}
+                            </ul>
+                        </CardContent>
+                    )}
+                    {upcomingVaccinations().length > 0 && (
+                        <CardContent>
+                            <h3 className="text-green-500 font-semibold">Gelecek Aşılar:</h3>
+                            <ul className="list-disc pl-5">
+                                {upcomingVaccinations().map((vaccine, index) => (
+                                    <li key={index} className="text-green-500">
                                         {vaccine.vaccineName} - {vaccine.description}
                                     </li>
                                 ))}
