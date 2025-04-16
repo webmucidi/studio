@@ -153,6 +153,7 @@ const VaccinationTimeline = () => {
     const [isAddBabyDialogOpen, setIsAddBabyDialogOpen] = useState(false);
     const [vaccinationSchedule, setVaccinationSchedule] = useState<VaccinationScheduleEntry[]>([]);
     const [isAddBabyFormOpen, setIsAddBabyFormOpen] = useState(false);
+    const [showStatus, setShowStatus] = useState(false);
 
     useEffect(() => {
         const storedBabyProfiles = localStorage.getItem('babyProfiles');
@@ -276,6 +277,7 @@ const VaccinationTimeline = () => {
     const handleSelectBaby = (babyId: string) => {
         const baby = babyProfiles.find(profile => profile.id === babyId);
         setSelectedBaby(baby || null);
+        setShowStatus(false); // Hide the status when a new baby is selected
     };
 
     const ageInMonths = selectedBaby ? differenceInMonths(new Date(), selectedBaby.birthDate) : 0;
@@ -311,7 +313,29 @@ const VaccinationTimeline = () => {
     const overdueVaccinationsList = calculateOverdueVaccinations();
     const upcomingVaccinationsList = calculateUpcomingVaccinations();
 
+    // State to manage visibility of the vaccination status
+    const [statusVisible, setStatusVisible] = useState(false);
+
+    useEffect(() => {
+        let timeoutId: NodeJS.Timeout;
+
+        if (showStatus) {
+            setStatusVisible(true);
+            timeoutId = setTimeout(() => {
+                setStatusVisible(false);
+                setShowStatus(false);
+            }, 5000); // 5 seconds
+        }
+
+        return () => clearTimeout(timeoutId); // Clear timeout on unmount or update
+    }, [showStatus]);
+
+    const toggleStatusVisibility = () => {
+        setShowStatus(true);
+    };
+
     return (
+        (
         <div className="flex flex-col md:flex-row min-h-screen bg-background">
             <div className="w-full md:w-2/3 p-4">
                 <Card>
@@ -359,15 +383,41 @@ const VaccinationTimeline = () => {
                                     ))}
                                 </SelectContent>
                             </Select>
+
+                            <Button onClick={toggleStatusVisibility}>Aşı Durumunu Göster</Button>
                         </div>
                     </CardHeader>
 
-                    {selectedBaby && (
-                        <VaccinationStatusDisplay
-                            selectedBaby={selectedBaby}
-                            vaccinationSchedule={vaccinationSchedule}
-                            vaccinationRecords={vaccinationRecords}
-                        />
+                    {statusVisible && selectedBaby && (
+                        <CardContent>
+                            {overdueVaccinationsList.length > 0 && (
+                                <div className="mb-4">
+                                    <h3 className="text-red-500 font-semibold">Gecikmiş Aşılar:</h3>
+                                    <ul className="list-disc pl-5">
+                                        {overdueVaccinationsList.map((vaccine, index) => (
+                                            <li key={index} className="text-red-500">
+                                                {vaccine.vaccineName} - {vaccine.description}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                            {upcomingVaccinationsList.length > 0 && (
+                                <div>
+                                    <h3 className="text-green-500 font-semibold">Gelecek Aşılar:</h3>
+                                    <ul className="list-disc pl-5">
+                                        {upcomingVaccinationsList.map((vaccine, index) => (
+                                            <li key={index} className="text-green-500">
+                                                {vaccine.vaccineName} - {vaccine.description}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                            {(overdueVaccinationsList.length === 0 && upcomingVaccinationsList.length === 0) && (
+                                <p>Aşı durumu bilgisi bulunmamaktadır.</p>
+                            )}
+                        </CardContent>
                     )}
 
                     <CardContent className="space-y-4">
@@ -477,7 +527,9 @@ const VaccinationTimeline = () => {
                 </DialogContent>
             </Dialog>
         </div>
+         )
     );
 };
 
 export default VaccinationTimeline;
+
