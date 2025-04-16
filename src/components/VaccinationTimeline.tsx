@@ -28,6 +28,7 @@ import {useForm} from "react-hook-form";
 import {zodResolver} from "@hookform/resolvers/zod";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert";
+import VaccinationStatusDisplay from "@/components/VaccinationStatusDisplay";
 
 interface VaccinationRecord {
     vaccineName: string;
@@ -361,34 +362,13 @@ const VaccinationTimeline = () => {
                         </div>
                     </CardHeader>
 
-                      {selectedBaby && (
-                          <CardContent>
-                              {overdueVaccinationsList.length > 0 && (
-                                  <CardContent>
-                                      <h3 className="text-red-500 font-semibold">Gecikmiş Aşılar:</h3>
-                                      <ul className="list-disc pl-5">
-                                          {overdueVaccinationsList.map((vaccine, index) => (
-                                              <li key={index} className="text-red-500">
-                                                  {vaccine.vaccineName} - {vaccine.description}
-                                              </li>
-                                          ))}
-                                      </ul>
-                                  </CardContent>
-                              )}
-                              {upcomingVaccinationsList.length > 0 && (
-                                  <CardContent>
-                                      <h3 className="text-green-500 font-semibold">Gelecek Aşılar:</h3>
-                                      <ul className="list-disc pl-5">
-                                          {upcomingVaccinationsList.map((vaccine, index) => (
-                                              <li key={index} className="text-green-500">
-                                                  {vaccine.vaccineName} - {vaccine.description}
-                                              </li>
-                                          ))}
-                                      </ul>
-                                  </CardContent>
-                              )}
-                          </CardContent>
-                      )}
+                    {selectedBaby && (
+                        <VaccinationStatusDisplay
+                            selectedBaby={selectedBaby}
+                            vaccinationSchedule={vaccinationSchedule}
+                            vaccinationRecords={vaccinationRecords}
+                        />
+                    )}
 
                     <CardContent className="space-y-4">
                         {vaccinationRecords
