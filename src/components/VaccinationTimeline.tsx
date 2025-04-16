@@ -1,6 +1,6 @@
 "use client";
 
-import {useState, useEffect} from "react";
+import {useState, useEffect, useCallback} from "react";
 import {VaccinationRecordForm} from "@/components/VaccinationRecordForm";
 import {VaccinationScheduleEntry, getVaccinationScheduleForAge} from "@/services/vaccination-schedule";
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
@@ -150,6 +150,8 @@ const VaccinationTimeline = () => {
     const [isAddBabyDialogOpen, setIsAddBabyDialogOpen] = useState(false);
     const [vaccinationSchedule, setVaccinationSchedule] = useState<VaccinationScheduleEntry[]>([]);
     const [isAddBabyFormOpen, setIsAddBabyFormOpen] = useState(false);
+    const [overdueVaccinationsList, setOverdueVaccinationsList] = useState<VaccinationScheduleEntry[]>([]);
+    const [upcomingVaccinationsList, setUpcomingVaccinationsList] = useState<VaccinationScheduleEntry[]>([]);
 
     useEffect(() => {
         // Load data from localStorage on component mount
@@ -275,7 +277,7 @@ const VaccinationTimeline = () => {
 
     const ageInMonths = selectedBaby ? differenceInMonths(new Date(), selectedBaby.birthDate) : 0;
 
-    const overdueVaccinations = () => {
+    const calculateOverdueVaccinations = useCallback(() => {
         if (!selectedBaby) return [];
 
         // Filter the entire vaccination schedule to find entries that should have been administered by now
@@ -289,9 +291,9 @@ const VaccinationTimeline = () => {
                 record.vaccineName === vaccination.vaccineName && record.babyId === selectedBaby.id
             );
         });
-    };
+    }, [vaccinationSchedule, vaccinationRecords, selectedBaby, ageInMonths]);
 
-    const upcomingVaccinations = () => {
+    const calculateUpcomingVaccinations = useCallback(() => {
         if (!selectedBaby) return [];
 
         // Filter the vaccination schedule for entries that are in the future
@@ -305,7 +307,12 @@ const VaccinationTimeline = () => {
                 record.vaccineName === vaccination.vaccineName && record.babyId === selectedBaby.id
             );
         });
-    };
+    }, [vaccinationSchedule, vaccinationRecords, selectedBaby, ageInMonths]);
+
+    useEffect(() => {
+        setOverdueVaccinationsList(calculateOverdueVaccinations());
+        setUpcomingVaccinationsList(calculateUpcomingVaccinations());
+    }, [calculateOverdueVaccinations, calculateUpcomingVaccinations, selectedBaby]);
 
     return (
         <div className="flex flex-col md:flex-row min-h-screen bg-background">
@@ -407,11 +414,11 @@ const VaccinationTimeline = () => {
                                 </div>
                             ))}
                     </CardContent>
-                    {overdueVaccinations().length > 0 && (
+                    {overdueVaccinationsList.length > 0 && (
                         <CardContent>
                             <h3 className="text-red-500 font-semibold">Gecikmiş Aşılar:</h3>
                             <ul className="list-disc pl-5">
-                                {overdueVaccinations().map((vaccine, index) => (
+                                {overdueVaccinationsList.map((vaccine, index) => (
                                     <li key={index} className="text-red-500">
                                         {vaccine.vaccineName} - {vaccine.description}
                                     </li>
@@ -419,11 +426,11 @@ const VaccinationTimeline = () => {
                             </ul>
                         </CardContent>
                     )}
-                    {upcomingVaccinations().length > 0 && (
+                    {upcomingVaccinationsList.length > 0 && (
                         <CardContent>
                             <h3 className="text-green-500 font-semibold">Gelecek Aşılar:</h3>
                             <ul className="list-disc pl-5">
-                                {upcomingVaccinations().map((vaccine, index) => (
+                                {upcomingVaccinationsList.map((vaccine, index) => (
                                     <li key={index} className="text-green-500">
                                         {vaccine.vaccineName} - {vaccine.description}
                                     </li>
