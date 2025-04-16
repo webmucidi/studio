@@ -153,11 +153,6 @@ const VaccinationTimeline = () => {
     const [isAddBabyDialogOpen, setIsAddBabyDialogOpen] = useState(false);
     const [vaccinationSchedule, setVaccinationSchedule] = useState<VaccinationScheduleEntry[]>([]);
     const [isAddBabyFormOpen, setIsAddBabyFormOpen] = useState(false);
-    const [showOverdueAlert, setShowOverdueAlert] = useState(false);
-    const [overdueVaccinationsList, setOverdueVaccinationsList] = useState<VaccinationScheduleEntry[]>([]);
-    const [showVaccinationStatus, setShowVaccinationStatus] = useState(false);
-    const [isVaccinationStatusDialogOpen, setIsVaccinationStatusDialogOpen] = useState(false);
-
 
     useEffect(() => {
         const storedBabyProfiles = localStorage.getItem('babyProfiles');
@@ -166,6 +161,9 @@ const VaccinationTimeline = () => {
                 ...profile,
                 birthDate: new Date(profile.birthDate),
             })));
+        } else {
+            setBabyProfiles([]);
+            setSelectedBaby(null);
         }
     }, []);
 

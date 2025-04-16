@@ -8,7 +8,7 @@ import {CardContent} from "@/components/ui/card";
 import {BabyProfile} from "@/components/VaccinationTimeline";
 
 interface VaccinationStatusDisplayProps {
-    selectedBaby: BabyProfile;
+    selectedBaby: BabyProfile | null;
     vaccinationSchedule: VaccinationScheduleEntry[];
     vaccinationRecords: VaccinationRecord[];
 }
@@ -27,7 +27,7 @@ const VaccinationStatusDisplay: React.FC<VaccinationStatusDisplayProps> = ({sele
 
         return potentialVaccinations.filter(vaccination => {
             return !vaccinationRecords.find(record =>
-                record.vaccineName === vaccination.vaccineName && record.babyId === selectedBaby.id
+                record.vaccineName === vaccination.vaccinationName && record.babyId === selectedBaby.id
             );
         });
     }, [vaccinationSchedule, vaccinationRecords, selectedBaby, ageInMonths]);
@@ -54,7 +54,7 @@ const VaccinationStatusDisplay: React.FC<VaccinationStatusDisplayProps> = ({sele
             setOverdueVaccinationsList([]);
             setUpcomingVaccinationsList([]);
         }
-    }, [vaccinationSchedule, vaccinationRecords, selectedBaby, ageInMonths, calculateOverdueVaccinations, calculateUpcomingVaccinations]);
+    }, [vaccinationSchedule, vaccinationRecords, selectedBaby, calculateOverdueVaccinations, calculateUpcomingVaccinations]);
 
     return (
         <>
