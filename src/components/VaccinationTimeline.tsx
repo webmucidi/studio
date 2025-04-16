@@ -7,10 +7,11 @@ import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/compo
 import {format} from "date-fns";
 import {AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger} from "@/components/ui/alert-dialog";
 import {Button} from "@/components/ui/button";
-import {Edit, Trash} from "lucide-react";
+import {Edit, Plus, Trash, UserPlus} from "lucide-react";
 import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger} from "@/components/ui/dialog";
 import {z} from "zod";
 import {toast} from "@/hooks/use-toast";
+import {Input} from "@/components/ui/input";
 
 interface VaccinationRecord {
     vaccineName: string;
@@ -18,6 +19,11 @@ interface VaccinationRecord {
     batchNumber?: string;
     notes?: string;
     id: string;
+}
+
+interface BabyProfile {
+    id: string;
+    name: string;
 }
 
 const initialVaccinationSchedule: VaccinationScheduleEntry[] = [
@@ -76,10 +82,22 @@ const initialVaccinationRecords: VaccinationRecord[] = [
         id: "3",
     },
 ];
+
+const initialBabyProfiles: BabyProfile[] = [
+    {
+        id: "1",
+        name: "Baby A",
+    },
+];
+
 const VaccinationTimeline = () => {
     const [vaccinationRecords, setVaccinationRecords] = useState<VaccinationRecord[]>(initialVaccinationRecords);
+    const [babyProfiles, setBabyProfiles] = useState<BabyProfile[]>(initialBabyProfiles);
+    const [selectedBaby, setSelectedBaby] = useState<BabyProfile>(initialBabyProfiles[0]);
     const [selectedRecord, setSelectedRecord] = useState<VaccinationRecord | null>(null);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+    const [isAddBabyDialogOpen, setIsAddBabyDialogOpen] = useState(false);
+    const [newBabyName, setNewBabyName] = useState("");
 
     const addVaccinationRecord = (record: Omit<VaccinationRecord, "id">) => {
         const newRecord = {...record, id: Date.now().toString()};
@@ -116,14 +134,66 @@ const VaccinationTimeline = () => {
         setIsEditDialogOpen(true);
     };
 
+    const handleAddBaby = () => {
+        if (newBabyName.trim() !== "") {
+            const newBaby: BabyProfile = {
+                id: Date.now().toString(),
+                name: newBabyName,
+            };
+            setBabyProfiles([...babyProfiles, newBaby]);
+            setSelectedBaby(newBaby);
+            setNewBabyName("");
+            setIsAddBabyDialogOpen(false);
+        }
+    };
+
     return (
         <div className="flex flex-col md:flex-row min-h-screen bg-background">
             {/* Left Side: Vaccination Records Timeline */}
             <div className="w-full md:w-2/3 p-4">
                 <Card>
-                    <CardHeader>
-                        <CardTitle>Vaccination Timeline</CardTitle>
-                        <CardDescription>List of recorded vaccinations</CardDescription>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <div>
+                            <CardTitle>Vaccination Timeline</CardTitle>
+                            <CardDescription>List of recorded vaccinations for {selectedBaby.name}</CardDescription>
+                        </div>
+                        <Dialog open={isAddBabyDialogOpen} onOpenChange={setIsAddBabyDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button variant="outline">
+                                    <UserPlus className="mr-2 h-4 w-4"/>
+                                    Add Baby
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-[425px]">
+                                <DialogHeader>
+                                    <DialogTitle>Add New Baby Profile</DialogTitle>
+                                    <DialogDescription>
+                                        Create a profile for a new baby to track vaccinations.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <div className="grid gap-4 py-4">
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <label
+                                            htmlFor="name"
+                                            className="text-right text-sm font-medium leading-none text-foreground"
+                                        >
+                                            Name
+                                        </label>
+                                        <div className="col-span-3">
+                                            <Input
+                                                id="name"
+                                                value={newBabyName}
+                                                onChange={(e) => setNewBabyName(e.target.value)}
+                                                className="col-span-3"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                                <Button type="submit" onClick={handleAddBaby}>
+                                    Create Baby Profile
+                                </Button>
+                            </DialogContent>
+                        </Dialog>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         {vaccinationRecords.sort((a, b) => a.date.getTime() - b.date.getTime()).map((record) => (
@@ -178,7 +248,7 @@ const VaccinationTimeline = () => {
                 <Card>
                     <CardHeader>
                         <CardTitle>Add New Vaccination</CardTitle>
-                        <CardDescription>Record a new vaccination</CardDescription>
+                        <CardDescription>Record a new vaccination for {selectedBaby.name}</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <VaccinationRecordForm

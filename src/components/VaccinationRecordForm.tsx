@@ -21,6 +21,7 @@ import {zodResolver} from "@hookform/resolvers/zod";
 import {useState} from "react";
 import {format} from "date-fns";
 import {VaccinationScheduleEntry} from "@/services/vaccination-schedule";
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 
 const FormSchema = z.object({
     vaccineName: z.string().min(2, {
@@ -67,11 +68,22 @@ export function VaccinationRecordForm({onSubmit, initialValues, vaccinationOptio
                     render={({field}) => (
                         <FormItem>
                             <FormLabel>Vaccine name</FormLabel>
-                            <FormControl>
-                                <Input placeholder="DTaP" {...field} />
-                            </FormControl>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a vaccine"/>
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {vaccinationOptions.map((vaccine) => (
+                                        <SelectItem key={vaccine.vaccineName} value={vaccine.vaccineName}>
+                                            {vaccine.vaccineName}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                             <FormDescription>
-                                Enter the name of the vaccine.
+                                Select the name of the vaccine.
                             </FormDescription>
                             <FormMessage/>
                         </FormItem>
