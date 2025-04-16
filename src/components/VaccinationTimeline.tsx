@@ -28,7 +28,7 @@ import {useForm} from "react-hook-form";
 import {zodResolver} from "@hookform/resolvers/zod";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert";
-import VaccinationStatusDisplay from "@/components/VaccinationStatusDisplay";
+//import VaccinationStatusDisplay from "@/components/VaccinationStatusDisplay";
 
 interface VaccinationRecord {
     vaccineName: string;
@@ -161,6 +161,16 @@ const VaccinationTimeline = () => {
                 ...profile,
                 birthDate: new Date(profile.birthDate),
             })));
+            // Select the first baby profile if available
+            const firstBaby = JSON.parse(storedBabyProfiles)[0];
+            if (firstBaby) {
+                setSelectedBaby({
+                    ...firstBaby,
+                    birthDate: new Date(firstBaby.birthDate)
+                });
+            } else {
+                setSelectedBaby(null);
+            }
         } else {
             setBabyProfiles([]);
             setSelectedBaby(null);
@@ -274,6 +284,39 @@ const VaccinationTimeline = () => {
         setSelectedBaby(baby || null);
     };
 
+    const ageInMonths = selectedBaby ? differenceInMonths(new Date(), selectedBaby.birthDate) : 0;
+
+    const calculateOverdueVaccinations = useCallback(() => {
+        if (!selectedBaby) return [];
+
+        const potentialVaccinations = vaccinationSchedule.filter(entry =>
+            ageInMonths > entry.maxAgeMonths
+        );
+
+        return potentialVaccinations.filter(vaccination => {
+            return !vaccinationRecords.find(record =>
+                record.vaccineName === vaccination.vaccineName && record.babyId === selectedBaby.id
+            );
+        });
+    }, [vaccinationSchedule, vaccinationRecords, selectedBaby, ageInMonths]);
+
+    const calculateUpcomingVaccinations = useCallback(() => {
+        if (!selectedBaby) return [];
+
+        const futureVaccinations = vaccinationSchedule.filter(entry =>
+            ageInMonths < entry.minAgeMonths
+        );
+
+        return futureVaccinations.filter(vaccination => {
+            return !vaccinationRecords.find(record =>
+                record.vaccineName === vaccination.vaccineName && record.babyId === selectedBaby.id
+            );
+        });
+    }, [vaccinationSchedule, vaccinationRecords, selectedBaby, ageInMonths]);
+
+    const overdueVaccinationsList = calculateOverdueVaccinations();
+    const upcomingVaccinationsList = calculateUpcomingVaccinations();
+
     return (
         <div className="flex flex-col md:flex-row min-h-screen bg-background">
             <div className="w-full md:w-2/3 p-4">
@@ -327,11 +370,30 @@ const VaccinationTimeline = () => {
 
                     {selectedBaby && (
                         <CardContent>
-                            <VaccinationStatusDisplay
-                                selectedBaby={selectedBaby}
-                                vaccinationSchedule={vaccinationSchedule}
-                                vaccinationRecords={vaccinationRecords}
-                            />
+                            {overdueVaccinationsList.length > 0 && (
+                                <CardContent>
+                                    <h3 className="text-red-500 font-semibold">Gecikmiş Aşılar:</h3>
+                                    <ul className="list-disc pl-5">
+                                        {overdueVaccinationsList.map((vaccine, index) => (
+                                            <li key={index} className="text-red-500">
+                                                {vaccine.vaccineName} - {vaccine.description}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </CardContent>
+                            )}
+                            {upcomingVaccinationsList.length > 0 && (
+                                <CardContent>
+                                    <h3 className="text-green-500 font-semibold">Gelecek Aşılar:</h3>
+                                    <ul className="list-disc pl-5">
+                                        {upcomingVaccinationsList.map((vaccine, index) => (
+                                            <li key={index} className="text-green-500">
+                                                {vaccine.vaccineName} - {vaccine.description}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </CardContent>
+                            )}
                         </CardContent>
                     )}
 
