@@ -4,7 +4,7 @@ import {useState, useEffect} from "react";
 import {VaccinationRecordForm} from "@/components/VaccinationRecordForm";
 import {VaccinationScheduleEntry, getVaccinationScheduleForAge} from "@/services/vaccination-schedule";
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
-import {format, differenceInMonths} from "date-fns";
+import {format, differenceInMonths, isPast} from "date-fns";
 import {AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger} from "@/components/ui/alert-dialog";
 import {Button} from "@/components/ui/button";
 import {Edit, Trash, UserPlus} from "lucide-react";
@@ -273,6 +273,24 @@ const VaccinationTimeline = () => {
         setIsAddBabyFormOpen(false); // Close the form after submission
     };
 
+    const overdueVaccinations = () => {
+        if (!selectedBaby) return [];
+
+        const ageInMonths = differenceInMonths(new Date(), selectedBaby.birthDate);
+
+        // Filter the entire vaccination schedule to find entries that should have been administered by now
+        const potentialVaccinations = vaccinationSchedule.filter(entry =>
+            ageInMonths > entry.maxAgeMonths
+        );
+
+        // Filter out the potential vaccinations that have already been recorded
+        return potentialVaccinations.filter(vaccination => {
+            return !vaccinationRecords.find(record =>
+                record.vaccineName === vaccination.vaccineName && record.babyId === selectedBaby.id
+            );
+        });
+    };
+
     return (
         <div className="flex flex-col md:flex-row min-h-screen bg-background">
             {/* Left Side: Vaccination Records Timeline */}
@@ -373,6 +391,18 @@ const VaccinationTimeline = () => {
                                 </div>
                             ))}
                     </CardContent>
+                    {overdueVaccinations().length > 0 && (
+                        <CardContent>
+                            <h3 className="text-red-500 font-semibold">Gecikmiş Aşılar:</h3>
+                            <ul className="list-disc pl-5">
+                                {overdueVaccinations().map((vaccine, index) => (
+                                    <li key={index} className="text-red-500">
+                                        {vaccine.vaccineName} - {vaccine.description}
+                                    </li>
+                                ))}
+                            </ul>
+                        </CardContent>
+                    )}
                 </Card>
             </div>
 
