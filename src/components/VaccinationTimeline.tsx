@@ -27,6 +27,7 @@ import {cn} from "@/lib/utils";
 import {useForm} from "react-hook-form";
 import {zodResolver} from "@hookform/resolvers/zod";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
+import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert";
 
 interface VaccinationRecord {
     vaccineName: string;
@@ -155,12 +156,10 @@ const VaccinationStatus: React.FC<VaccinationStatusProps> = ({selectedBaby, vacc
     const calculateOverdueVaccinations = useCallback(() => {
         if (!selectedBaby) return [];
 
-        // Filter the entire vaccination schedule to find entries that should have been administered by now
         const potentialVaccinations = vaccinationSchedule.filter(entry =>
             ageInMonths > entry.maxAgeMonths
         );
 
-        // Filter out the potential vaccinations that have already been recorded
         return potentialVaccinations.filter(vaccination => {
             return !vaccinationRecords.find(record =>
                 record.vaccineName === vaccination.vaccineName && record.babyId === selectedBaby.id
@@ -171,12 +170,10 @@ const VaccinationStatus: React.FC<VaccinationStatusProps> = ({selectedBaby, vacc
     const calculateUpcomingVaccinations = useCallback(() => {
         if (!selectedBaby) return [];
 
-        // Filter the vaccination schedule for entries that are in the future
         const futureVaccinations = vaccinationSchedule.filter(entry =>
             ageInMonths < entry.minAgeMonths
         );
 
-        // Filter out the future vaccinations that have already been recorded
         return futureVaccinations.filter(vaccination => {
             return !vaccinationRecords.find(record =>
                 record.vaccineName === vaccination.vaccineName && record.babyId === selectedBaby.id
@@ -237,9 +234,10 @@ const VaccinationTimeline = () => {
     const [isAddBabyDialogOpen, setIsAddBabyDialogOpen] = useState(false);
     const [vaccinationSchedule, setVaccinationSchedule] = useState<VaccinationScheduleEntry[]>([]);
     const [isAddBabyFormOpen, setIsAddBabyFormOpen] = useState(false);
+    const [showOverdueAlert, setShowOverdueAlert] = useState(false);
+    const [overdueVaccinationsList, setOverdueVaccinationsList] = useState<VaccinationScheduleEntry[]>([]);
 
     useEffect(() => {
-        // Load data from localStorage on component mount
         const storedBabyProfiles = localStorage.getItem('babyProfiles');
         if (storedBabyProfiles) {
             setBabyProfiles(JSON.parse(storedBabyProfiles).map((profile: any) => ({
@@ -267,15 +265,12 @@ const VaccinationTimeline = () => {
     }, []);
 
     useEffect(() => {
-        // Save data to localStorage whenever babyProfiles changes
         localStorage.setItem('babyProfiles', JSON.stringify(babyProfiles));
     }, [babyProfiles]);
 
     useEffect(() => {
-        // Save data to localStorage whenever selectedBaby changes
         localStorage.setItem('selectedBaby', JSON.stringify(selectedBaby));
 
-        // Load vaccination records for the selected baby
         if (selectedBaby) {
             const storedVaccinationRecords = localStorage.getItem(`vaccinationRecords-${selectedBaby.id}`);
             if (storedVaccinationRecords) {
@@ -284,20 +279,18 @@ const VaccinationTimeline = () => {
                     date: new Date(record.date),
                 })));
             } else {
-                setVaccinationRecords([]); // Initialize to empty array if no records found
+                setVaccinationRecords([]);
             }
         } else {
-            setVaccinationRecords([]); // Clear records if no baby is selected
+            setVaccinationRecords([]);
         }
     }, [selectedBaby]);
 
     useEffect(() => {
         if (selectedBaby) {
-            // Save data to localStorage whenever vaccinationRecords changes, scoped to the selected baby
             localStorage.setItem(`vaccinationRecords-${selectedBaby.id}`, JSON.stringify(vaccinationRecords));
         }
     }, [vaccinationRecords, selectedBaby]);
-
 
     useEffect(() => {
         if (selectedBaby) {
@@ -316,6 +309,42 @@ const VaccinationTimeline = () => {
             setVaccinationSchedule([]);
         }
     }, [selectedBaby]);
+
+    const calculateOverdueVaccinations = useCallback(() => {
+        if (!selectedBaby || !vaccinationSchedule || !vaccinationRecords) return [];
+
+        const ageInMonths = differenceInMonths(new Date(), selectedBaby.birthDate);
+
+        const potentialVaccinations = vaccinationSchedule.filter(entry =>
+            ageInMonths > entry.maxAgeMonths
+        );
+
+        const overdue = potentialVaccinations.filter(vaccination => {
+            return !vaccinationRecords.find(record =>
+                record.vaccineName === vaccination.vaccineName && record.babyId === selectedBaby.id
+            );
+        });
+        return overdue;
+    }, [vaccinationSchedule, vaccinationRecords, selectedBaby]);
+
+    useEffect(() => {
+        if (selectedBaby && vaccinationSchedule && vaccinationRecords) {
+            const overdueVaccinations = calculateOverdueVaccinations();
+            setOverdueVaccinationsList(overdueVaccinations);
+
+            if (overdueVaccinations.length > 0) {
+                setShowOverdueAlert(true);
+                const timer = setTimeout(() => {
+                    setShowOverdueAlert(false);
+                }, 5000);
+                return () => clearTimeout(timer);
+            }
+        } else {
+            setOverdueVaccinationsList([]);
+            setShowOverdueAlert(false);
+        }
+    }, [selectedBaby, vaccinationSchedule, vaccinationRecords, calculateOverdueVaccinations]);
+
 
     const addVaccinationRecord = (record: Omit<VaccinationRecord, "id" | "babyId">) => {
         if (!selectedBaby) {
@@ -369,12 +398,11 @@ const VaccinationTimeline = () => {
         setBabyProfiles([...babyProfiles, newBaby]);
         setSelectedBaby(newBaby);
         setIsAddBabyDialogOpen(false);
-        setIsAddBabyFormOpen(false); // Close the form after submission
+        setIsAddBabyFormOpen(false);
     };
 
     return (
         <div className="flex flex-col md:flex-row min-h-screen bg-background">
-            {/* Left Side: Vaccination Records Timeline */}
             <div className="w-full md:w-2/3 p-4">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between">
@@ -410,6 +438,7 @@ const VaccinationTimeline = () => {
                                     setSelectedBaby(baby || null);
                                 }}
                                 value={selectedBaby?.id || ""}
+                                defaultValue={selectedBaby?.id || ""}
                             >
                                 <SelectTrigger className="w-[180px]">
                                     <SelectValue placeholder="Bebek Seç"/>
@@ -424,6 +453,21 @@ const VaccinationTimeline = () => {
                             </Select>
                         </div>
                     </CardHeader>
+
+                    {showOverdueAlert && overdueVaccinationsList.length > 0 && (
+                        <Alert variant="destructive">
+                            <AlertTitle>Gecikmiş Aşı Uyarısı!</AlertTitle>
+                            <AlertDescription>
+                                {selectedBaby?.name} için aşağıdaki aşılar gecikmiştir:
+                                <ul className="list-disc pl-5 mt-2">
+                                    {overdueVaccinationsList.map((vaccine, index) => (
+                                        <li key={index}>{vaccine.vaccineName} - {vaccine.description}</li>
+                                    ))}
+                                </ul>
+                            </AlertDescription>
+                        </Alert>
+                    )}
+
                     <VaccinationStatus
                         selectedBaby={selectedBaby}
                         vaccinationSchedule={vaccinationSchedule}
