@@ -28,6 +28,7 @@ import {useForm} from "react-hook-form";
 import {zodResolver} from "@hookform/resolvers/zod";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert";
+import VaccinationStatusDisplay from "@/components/VaccinationStatusDisplay";
 
 interface VaccinationRecord {
     vaccineName: string;
