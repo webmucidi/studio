@@ -189,7 +189,7 @@ const VaccinationStatus: React.FC<VaccinationStatusProps> = ({selectedBaby, vacc
             setOverdueVaccinationsList([]);
             setUpcomingVaccinationsList([]);
         }
-    }, [selectedBaby, vaccinationSchedule, vaccinationRecords, calculateOverdueVaccinations, calculateUpcomingVaccinations, ageInMonths]);
+    }, [vaccinationSchedule, vaccinationRecords, selectedBaby, ageInMonths, calculateOverdueVaccinations, calculateUpcomingVaccinations]);
 
     return (
         <>
@@ -236,6 +236,7 @@ const VaccinationTimeline = () => {
     const [isAddBabyFormOpen, setIsAddBabyFormOpen] = useState(false);
     const [showOverdueAlert, setShowOverdueAlert] = useState(false);
     const [overdueVaccinationsList, setOverdueVaccinationsList] = useState<VaccinationScheduleEntry[]>([]);
+    const [showVaccinationStatus, setShowVaccinationStatus] = useState(false);
 
     useEffect(() => {
         const storedBabyProfiles = localStorage.getItem('babyProfiles');
@@ -245,23 +246,6 @@ const VaccinationTimeline = () => {
                 birthDate: new Date(profile.birthDate),
             })));
         }
-
-        const storedSelectedBaby = localStorage.getItem('selectedBaby');
-        if (storedSelectedBaby) {
-            try {
-                const parsedBaby = JSON.parse(storedSelectedBaby);
-                if (parsedBaby === null || parsedBaby === "null") {
-                    setSelectedBaby(null);
-                } else {
-                    setSelectedBaby(parsedBaby);
-                }
-            } catch (e) {
-                console.error("Error parsing selectedBaby from localStorage", e);
-                setSelectedBaby(null);
-            }
-        } else {
-            setSelectedBaby(null);
-        }
     }, []);
 
     useEffect(() => {
@@ -269,8 +253,6 @@ const VaccinationTimeline = () => {
     }, [babyProfiles]);
 
     useEffect(() => {
-        localStorage.setItem('selectedBaby', JSON.stringify(selectedBaby));
-
         if (selectedBaby) {
             const storedVaccinationRecords = localStorage.getItem(`vaccinationRecords-${selectedBaby.id}`);
             if (storedVaccinationRecords) {
@@ -309,42 +291,6 @@ const VaccinationTimeline = () => {
             setVaccinationSchedule([]);
         }
     }, [selectedBaby]);
-
-    const calculateOverdueVaccinations = useCallback(() => {
-        if (!selectedBaby || !vaccinationSchedule || !vaccinationRecords) return [];
-
-        const ageInMonths = differenceInMonths(new Date(), selectedBaby.birthDate);
-
-        const potentialVaccinations = vaccinationSchedule.filter(entry =>
-            ageInMonths > entry.maxAgeMonths
-        );
-
-        const overdue = potentialVaccinations.filter(vaccination => {
-            return !vaccinationRecords.find(record =>
-                record.vaccineName === vaccination.vaccineName && record.babyId === selectedBaby.id
-            );
-        });
-        return overdue;
-    }, [vaccinationSchedule, vaccinationRecords, selectedBaby]);
-
-    useEffect(() => {
-        if (selectedBaby && vaccinationSchedule && vaccinationRecords) {
-            const overdueVaccinations = calculateOverdueVaccinations();
-            setOverdueVaccinationsList(overdueVaccinations);
-
-            if (overdueVaccinations.length > 0) {
-                setShowOverdueAlert(true);
-                const timer = setTimeout(() => {
-                    setShowOverdueAlert(false);
-                }, 5000);
-                return () => clearTimeout(timer);
-            }
-        } else {
-            setOverdueVaccinationsList([]);
-            setShowOverdueAlert(false);
-        }
-    }, [selectedBaby, vaccinationSchedule, vaccinationRecords, calculateOverdueVaccinations]);
-
 
     const addVaccinationRecord = (record: Omit<VaccinationRecord, "id" | "babyId">) => {
         if (!selectedBaby) {
@@ -396,10 +342,30 @@ const VaccinationTimeline = () => {
             birthDate: newBabyValues.birthDate,
         };
         setBabyProfiles([...babyProfiles, newBaby]);
-        setSelectedBaby(newBaby);
         setIsAddBabyDialogOpen(false);
         setIsAddBabyFormOpen(false);
+        toast({
+            title: "Başarılı",
+            description: "Bebek profili başarıyla oluşturuldu!",
+        })
     };
+
+    const handleSelectBaby = (babyId: string) => {
+        const baby = babyProfiles.find(profile => profile.id === babyId);
+        setSelectedBaby(baby || null);
+    };
+
+    const handleShowVaccinationStatus = () => {
+        if (!selectedBaby) {
+            toast({
+                title: "Hata",
+                description: "Lütfen önce bir bebek profili seçin.",
+                variant: "destructive",
+            });
+            return;
+        }
+        setShowVaccinationStatus(true);
+    }
 
     return (
         <div className="flex flex-col md:flex-row min-h-screen bg-background">
@@ -433,12 +399,10 @@ const VaccinationTimeline = () => {
                                 </DialogContent>
                             </Dialog>
                             <Select
-                                onValueChange={(value) => {
-                                    const baby = babyProfiles.find(profile => profile.id === value);
-                                    setSelectedBaby(baby || null);
-                                }}
+                                onValueChange={(value) => handleSelectBaby(value)}
                                 value={selectedBaby?.id || ""}
                                 defaultValue={selectedBaby?.id || ""}
+                                placeholder="Bebek Seç"
                             >
                                 <SelectTrigger className="w-[180px]">
                                     <SelectValue placeholder="Bebek Seç"/>
@@ -451,28 +415,19 @@ const VaccinationTimeline = () => {
                                     ))}
                                 </SelectContent>
                             </Select>
+                            <Button variant="secondary" onClick={handleShowVaccinationStatus}>
+                                Aşı Durumunu Göster
+                            </Button>
                         </div>
                     </CardHeader>
 
-                    {showOverdueAlert && overdueVaccinationsList.length > 0 && (
-                        <Alert variant="destructive">
-                            <AlertTitle>Gecikmiş Aşı Uyarısı!</AlertTitle>
-                            <AlertDescription>
-                                {selectedBaby?.name} için aşağıdaki aşılar gecikmiştir:
-                                <ul className="list-disc pl-5 mt-2">
-                                    {overdueVaccinationsList.map((vaccine, index) => (
-                                        <li key={index}>{vaccine.vaccineName} - {vaccine.description}</li>
-                                    ))}
-                                </ul>
-                            </AlertDescription>
-                        </Alert>
+                    {showVaccinationStatus && selectedBaby && (
+                        <VaccinationStatus
+                            selectedBaby={selectedBaby}
+                            vaccinationSchedule={vaccinationSchedule}
+                            vaccinationRecords={vaccinationRecords}
+                        />
                     )}
-
-                    <VaccinationStatus
-                        selectedBaby={selectedBaby}
-                        vaccinationSchedule={vaccinationSchedule}
-                        vaccinationRecords={vaccinationRecords}
-                    />
                     <CardContent className="space-y-4">
                         {vaccinationRecords
                             .filter(record => selectedBaby && record.babyId === selectedBaby.id)
