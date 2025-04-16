@@ -148,82 +148,6 @@ interface VaccinationStatusProps {
     vaccinationRecords: VaccinationRecord[];
 }
 
-const VaccinationStatus: React.FC<VaccinationStatusProps> = ({selectedBaby, vaccinationSchedule, vaccinationRecords}) => {
-    const [overdueVaccinationsList, setOverdueVaccinationsList] = useState<VaccinationScheduleEntry[]>([]);
-    const [upcomingVaccinationsList, setUpcomingVaccinationsList] = useState<VaccinationScheduleEntry[]>([]);
-    const ageInMonths = selectedBaby ? differenceInMonths(new Date(), selectedBaby.birthDate) : 0;
-
-    const calculateOverdueVaccinations = useCallback(() => {
-        if (!selectedBaby) return [];
-
-        const potentialVaccinations = vaccinationSchedule.filter(entry =>
-            ageInMonths > entry.maxAgeMonths
-        );
-
-        return potentialVaccinations.filter(vaccination => {
-            return !vaccinationRecords.find(record =>
-                record.vaccineName === vaccination.vaccineName && record.babyId === selectedBaby.id
-            );
-        });
-    }, [vaccinationSchedule, vaccinationRecords, selectedBaby, ageInMonths]);
-
-    const calculateUpcomingVaccinations = useCallback(() => {
-        if (!selectedBaby) return [];
-
-        const futureVaccinations = vaccinationSchedule.filter(entry =>
-            ageInMonths < entry.minAgeMonths
-        );
-
-        return futureVaccinations.filter(vaccination => {
-            return !vaccinationRecords.find(record =>
-                record.vaccineName === vaccination.vaccineName && record.babyId === selectedBaby.id
-            );
-        });
-    }, [vaccinationSchedule, vaccinationRecords, selectedBaby, ageInMonths]);
-
-    useEffect(() => {
-        if (selectedBaby) {
-            setOverdueVaccinationsList(calculateOverdueVaccinations());
-            setUpcomingVaccinationsList(calculateUpcomingVaccinations());
-        } else {
-            setOverdueVaccinationsList([]);
-            setUpcomingVaccinationsList([]);
-        }
-    }, [vaccinationSchedule, vaccinationRecords, selectedBaby, ageInMonths, calculateOverdueVaccinations, calculateUpcomingVaccinations]);
-
-    return (
-        <>
-            {selectedBaby && (
-                <>
-                    {overdueVaccinationsList.length > 0 && (
-                        <CardContent>
-                            <h3 className="text-red-500 font-semibold">Gecikmiş Aşılar:</h3>
-                            <ul className="list-disc pl-5">
-                                {overdueVaccinationsList.map((vaccine, index) => (
-                                    <li key={index} className="text-red-500">
-                                        {vaccine.vaccineName} - {vaccine.description}
-                                    </li>
-                                ))}
-                            </ul>
-                        </CardContent>
-                    )}
-                    {upcomingVaccinationsList.length > 0 && (
-                        <CardContent>
-                            <h3 className="text-green-500 font-semibold">Gelecek Aşılar:</h3>
-                            <ul className="list-disc pl-5">
-                                {upcomingVaccinationsList.map((vaccine, index) => (
-                                    <li key={index} className="text-green-500">
-                                        {vaccine.vaccineName} - {vaccine.description}
-                                    </li>
-                                ))}
-                            </ul>
-                        </CardContent>
-                    )}
-                </>
-            )}
-        </>
-    );
-};
 
 const VaccinationTimeline = () => {
     const [vaccinationRecords, setVaccinationRecords] = useState<VaccinationRecord[]>([]);
@@ -237,6 +161,8 @@ const VaccinationTimeline = () => {
     const [showOverdueAlert, setShowOverdueAlert] = useState(false);
     const [overdueVaccinationsList, setOverdueVaccinationsList] = useState<VaccinationScheduleEntry[]>([]);
     const [showVaccinationStatus, setShowVaccinationStatus] = useState(false);
+    const [isVaccinationStatusDialogOpen, setIsVaccinationStatusDialogOpen] = useState(false);
+
 
     useEffect(() => {
         const storedBabyProfiles = localStorage.getItem('babyProfiles');
@@ -364,8 +290,86 @@ const VaccinationTimeline = () => {
             });
             return;
         }
-        setShowVaccinationStatus(true);
+        setIsVaccinationStatusDialogOpen(true);
     }
+
+
+    const VaccinationStatus: React.FC<VaccinationStatusProps> = ({selectedBaby, vaccinationSchedule, vaccinationRecords}) => {
+        const [overdueVaccinationsList, setOverdueVaccinationsList] = useState<VaccinationScheduleEntry[]>([]);
+        const [upcomingVaccinationsList, setUpcomingVaccinationsList] = useState<VaccinationScheduleEntry[]>([]);
+        const ageInMonths = selectedBaby ? differenceInMonths(new Date(), selectedBaby.birthDate) : 0;
+
+        const calculateOverdueVaccinations = useCallback(() => {
+            if (!selectedBaby) return [];
+
+            const potentialVaccinations = vaccinationSchedule.filter(entry =>
+                ageInMonths > entry.maxAgeMonths
+            );
+
+            return potentialVaccinations.filter(vaccination => {
+                return !vaccinationRecords.find(record =>
+                    record.vaccineName === vaccination.vaccineName && record.babyId === selectedBaby.id
+                );
+            });
+        }, [vaccinationSchedule, vaccinationRecords, selectedBaby, ageInMonths]);
+
+        const calculateUpcomingVaccinations = useCallback(() => {
+            if (!selectedBaby) return [];
+
+            const futureVaccinations = vaccinationSchedule.filter(entry =>
+                ageInMonths < entry.minAgeMonths
+            );
+
+            return futureVaccinations.filter(vaccination => {
+                return !vaccinationRecords.find(record =>
+                    record.vaccineName === vaccination.vaccineName && record.babyId === selectedBaby.id
+                );
+            });
+        }, [vaccinationSchedule, vaccinationRecords, selectedBaby, ageInMonths]);
+
+        useEffect(() => {
+            if (selectedBaby) {
+                setOverdueVaccinationsList(calculateOverdueVaccinations());
+                setUpcomingVaccinationsList(calculateUpcomingVaccinations());
+            } else {
+                setOverdueVaccinationsList([]);
+                setUpcomingVaccinationsList([]);
+            }
+        }, [vaccinationSchedule, vaccinationRecords, selectedBaby, ageInMonths, calculateOverdueVaccinations, calculateUpcomingVaccinations]);
+
+        return (
+            <>
+                {selectedBaby && (
+                    <>
+                        {overdueVaccinationsList.length > 0 && (
+                            <CardContent>
+                                <h3 className="text-red-500 font-semibold">Gecikmiş Aşılar:</h3>
+                                <ul className="list-disc pl-5">
+                                    {overdueVaccinationsList.map((vaccine, index) => (
+                                        <li key={index} className="text-red-500">
+                                            {vaccine.vaccineName} - {vaccine.description}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </CardContent>
+                        )}
+                        {upcomingVaccinationsList.length > 0 && (
+                            <CardContent>
+                                <h3 className="text-green-500 font-semibold">Gelecek Aşılar:</h3>
+                                <ul className="list-disc pl-5">
+                                    {upcomingVaccinationsList.map((vaccine, index) => (
+                                        <li key={index} className="text-green-500">
+                                            {vaccine.vaccineName} - {vaccine.description}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </CardContent>
+                        )}
+                    </>
+                )}
+            </>
+        );
+    };
 
     return (
         <div className="flex flex-col md:flex-row min-h-screen bg-background">
@@ -421,13 +425,7 @@ const VaccinationTimeline = () => {
                         </div>
                     </CardHeader>
 
-                    {showVaccinationStatus && selectedBaby && (
-                        <VaccinationStatus
-                            selectedBaby={selectedBaby}
-                            vaccinationSchedule={vaccinationSchedule}
-                            vaccinationRecords={vaccinationRecords}
-                        />
-                    )}
+
                     <CardContent className="space-y-4">
                         {vaccinationRecords
                             .filter(record => selectedBaby && record.babyId === selectedBaby.id)
@@ -532,6 +530,25 @@ const VaccinationTimeline = () => {
                             vaccinationOptions={vaccinationSchedule}
                         />
                     ) : null}
+                </DialogContent>
+            </Dialog>
+            <Dialog open={isVaccinationStatusDialogOpen} onOpenChange={setIsVaccinationStatusDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Aşı Durumu</DialogTitle>
+                        <DialogDescription>
+                            Gecikmiş ve gelecek aşılar.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {selectedBaby ? (
+                        <VaccinationStatus
+                            selectedBaby={selectedBaby}
+                            vaccinationSchedule={vaccinationSchedule}
+                            vaccinationRecords={vaccinationRecords}
+                        />
+                    ) : (
+                        <p>Lütfen önce bir bebek profili seçin.</p>
+                    )}
                 </DialogContent>
             </Dialog>
         </div>
