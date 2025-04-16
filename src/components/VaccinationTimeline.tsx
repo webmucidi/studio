@@ -154,7 +154,6 @@ const VaccinationTimeline = () => {
     const [vaccinationSchedule, setVaccinationSchedule] = useState<VaccinationScheduleEntry[]>([]);
     const [isAddBabyFormOpen, setIsAddBabyFormOpen] = useState(false);
     const [showStatus, setShowStatus] = useState(false);
-    const [statusVisible, setStatusVisible] = useState(false);
 
     useEffect(() => {
         const storedBabyProfiles = localStorage.getItem('babyProfiles');
@@ -315,27 +314,6 @@ const VaccinationTimeline = () => {
     const overdueVaccinationsList = calculateOverdueVaccinations();
     const upcomingVaccinationsList = calculateUpcomingVaccinations();
 
-    useEffect(() => {
-        let timeoutId: NodeJS.Timeout;
-
-        if (showStatus && selectedBaby) {
-            setStatusVisible(true);
-            timeoutId = setTimeout(() => {
-                setStatusVisible(false);
-                setShowStatus(false);
-            }, 5000);
-        }
-        else {
-            setStatusVisible(false);
-        }
-
-        return () => clearTimeout(timeoutId);
-    }, [showStatus, selectedBaby]);
-
-
-    const toggleStatusVisibility = () => {
-        setShowStatus(true);
-    };
 
 
     return (
@@ -393,7 +371,8 @@ const VaccinationTimeline = () => {
                         </div>
                     </CardHeader>
 
-                    {statusVisible && selectedBaby && (
+                    
+                    {selectedBaby && (
                         <CardContent>
                             {overdueVaccinationsList.length > 0 && (
                                 <div className="mb-4">
