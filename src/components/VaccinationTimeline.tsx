@@ -145,15 +145,17 @@ function AddBabyForm({onSubmit, initialValues}: AddBabyFormProps) {
 
 
 const VaccinationTimeline = () => {
-    const [vaccinationRecords, setVaccinationRecords] = useState<VaccinationRecord[]>([]);
     const [babyProfiles, setBabyProfiles] = useState<BabyProfile[]>([]);
     const [selectedBaby, setSelectedBaby] = useState<BabyProfile | null>(null);
-    const [selectedRecord, setSelectedRecord] = useState<VaccinationRecord | null>(null);
-    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-    const [isAddBabyDialogOpen, setIsAddBabyDialogOpen] = useState(false);
+    const [vaccinationRecords, setVaccinationRecords] = useState<VaccinationRecord[]>([]);
     const [vaccinationSchedule, setVaccinationSchedule] = useState<VaccinationScheduleEntry[]>([]);
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+    const [selectedRecord, setSelectedRecord] = useState<VaccinationRecord | null>(null);
+    const [isAddBabyDialogOpen, setIsAddBabyDialogOpen] = useState(false);
     const [isAddBabyFormOpen, setIsAddBabyFormOpen] = useState(false);
-    const [showStatus, setShowStatus] = useState(false);
+    const [showStatus, setShowStatus] = useState(true);
+    const [overdueVaccinationsList, setOverdueVaccinationsList] = useState<VaccinationScheduleEntry[]>([]);
+    const [upcomingVaccinationsList, setUpcomingVaccinationsList] = useState<VaccinationScheduleEntry[]>([]);
 
     useEffect(() => {
         const storedBabyProfiles = localStorage.getItem('babyProfiles');
@@ -202,7 +204,11 @@ const VaccinationTimeline = () => {
         if (selectedBaby) {
             const ageInMonths = differenceInMonths(new Date(), selectedBaby.birthDate);
             getVaccinationScheduleForAge(ageInMonths)
-                .then(schedule => setVaccinationSchedule(schedule))
+                .then(schedule => {
+                    setVaccinationSchedule(schedule);
+                    setOverdueVaccinationsList(calculateOverdueVaccinations());
+                    setUpcomingVaccinationsList(calculateUpcomingVaccinations());
+                })
                 .catch(error => {
                     console.error("Aşılama takvimi alınamadı", error);
                     toast({
@@ -213,8 +219,17 @@ const VaccinationTimeline = () => {
                 });
         } else {
             setVaccinationSchedule([]);
+            setOverdueVaccinationsList([]);
+            setUpcomingVaccinationsList([]);
         }
     }, [selectedBaby]);
+
+    useEffect(() => {
+        if (selectedBaby) {
+            setOverdueVaccinationsList(calculateOverdueVaccinations());
+            setUpcomingVaccinationsList(calculateUpcomingVaccinations());
+        }
+    }, [vaccinationRecords, vaccinationSchedule, selectedBaby]);
 
     const addVaccinationRecord = (record: Omit<VaccinationRecord, "id" | "babyId">) => {
         if (!selectedBaby) {
@@ -311,11 +326,6 @@ const VaccinationTimeline = () => {
         });
     }, [vaccinationSchedule, vaccinationRecords, selectedBaby]);
 
-    const overdueVaccinationsList = calculateOverdueVaccinations();
-    const upcomingVaccinationsList = calculateUpcomingVaccinations();
-
-
-
     return (
         
         <div className="flex flex-col md:flex-row min-h-screen bg-background">
@@ -330,7 +340,7 @@ const VaccinationTimeline = () => {
                                     "Bebek seçilmedi. Lütfen bir bebek profili ekleyin."}
                             </CardDescription>
                         </div>
-                        <div>
+                        <div className="flex gap-2">
                             <Dialog open={isAddBabyDialogOpen} onOpenChange={setIsAddBabyDialogOpen}>
                                 <DialogTrigger asChild>
                                     <Button variant="outline">
@@ -365,14 +375,10 @@ const VaccinationTimeline = () => {
                                     ))}
                                 </SelectContent>
                             </Select>
-
-
-
                         </div>
                     </CardHeader>
 
-                    
-                    {selectedBaby && (
+                    {selectedBaby && showStatus && (
                         <CardContent>
                             {overdueVaccinationsList.length > 0 && (
                                 <div className="mb-4">
