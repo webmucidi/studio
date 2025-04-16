@@ -154,7 +154,7 @@ const VaccinationTimeline = () => {
     const [vaccinationSchedule, setVaccinationSchedule] = useState<VaccinationScheduleEntry[]>([]);
     const [isAddBabyFormOpen, setIsAddBabyFormOpen] = useState(false);
     const [showStatus, setShowStatus] = useState(false);
-    const [statusVisible, setStatusVisible] = useState(false); // State for status visibility
+    const [statusVisible, setStatusVisible] = useState(false);
 
     useEffect(() => {
         const storedBabyProfiles = localStorage.getItem('babyProfiles');
@@ -168,7 +168,7 @@ const VaccinationTimeline = () => {
             setBabyProfiles([]);
 
         }
-        setSelectedBaby(null); // Initialize selectedBaby to null on component mount
+        setSelectedBaby(null);
     }, []);
 
     useEffect(() => {
@@ -279,10 +279,9 @@ const VaccinationTimeline = () => {
     const handleSelectBaby = (babyId: string) => {
         const baby = babyProfiles.find(profile => profile.id === babyId);
         setSelectedBaby(baby || null);
-        setShowStatus(true); // Trigger status update when a baby is selected
+        setShowStatus(true);
     };
 
-    // Use useCallback to memoize calculateOverdueVaccinations and calculateUpcomingVaccinations
     const calculateOverdueVaccinations = useCallback(() => {
         if (!selectedBaby) return [];
 
@@ -326,9 +325,13 @@ const VaccinationTimeline = () => {
                 setShowStatus(false);
             }, 5000);
         }
+        else {
+            setStatusVisible(false);
+        }
 
         return () => clearTimeout(timeoutId);
     }, [showStatus, selectedBaby]);
+
 
     const toggleStatusVisibility = () => {
         setShowStatus(true);
@@ -336,7 +339,7 @@ const VaccinationTimeline = () => {
 
 
     return (
-        (
+        
         <div className="flex flex-col md:flex-row min-h-screen bg-background">
             <div className="w-full md:w-2/3 p-4">
                 <Card>
@@ -529,7 +532,7 @@ const VaccinationTimeline = () => {
                 </DialogContent>
             </Dialog>
         </div>
-         )
+         
     );
 };
 
