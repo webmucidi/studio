@@ -4,7 +4,7 @@ import {useState, useEffect} from "react";
 import {VaccinationRecordForm} from "@/components/VaccinationRecordForm";
 import {VaccinationScheduleEntry, getVaccinationScheduleForAge} from "@/services/vaccination-schedule";
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
-import {format, differenceInMonths, isBefore} from "date-fns";
+import {format, differenceInMonths} from "date-fns";
 import {AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger} from "@/components/ui/alert-dialog";
 import {Button} from "@/components/ui/button";
 import {Edit, Plus, Trash, UserPlus} from "lucide-react";
@@ -25,7 +25,7 @@ import {
 import {Popover, PopoverContent, PopoverTrigger} from "@/components/ui/popover";
 import {cn} from "@/lib/utils";
 import {useForm} from "react-hook-form";
-import {zodResolver} from "@hookform/resolvers/zod"; // Correct import statement
+import {zodResolver} from "@hookform/resolvers/zod";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 
 interface VaccinationRecord {
@@ -42,12 +42,7 @@ interface BabyProfile {
     birthDate: Date;
 }
 
-const initialVaccinationRecords: VaccinationRecord[] = [];
-
-const initialBabyProfiles: BabyProfile[] = [
-];
-
-const AddBabyFormSchema = z.object({
+const ADD_BABY_FORM_SCHEMA = z.object({
     name: z.string().min(2, {
         message: "Bebek adı en az 2 karakter olmalıdır.",
     }),
@@ -57,22 +52,22 @@ const AddBabyFormSchema = z.object({
 })
 
 interface AddBabyFormProps {
-    onSubmit: (values: z.infer<typeof AddBabyFormSchema>) => void;
-    initialValues?: Partial<z.infer<typeof AddBabyFormSchema>>;
+    onSubmit: (values: z.infer<typeof ADD_BABY_FORM_SCHEMA>) => void;
+    initialValues?: Partial<z.infer<typeof ADD_BABY_FORM_SCHEMA>>;
 }
 
 function AddBabyForm({onSubmit, initialValues}: AddBabyFormProps) {
     const [open, setOpen] = useState(false);
 
-    const form = useForm<z.infer<typeof AddBabyFormSchema>>({
-        resolver: zodResolver(AddBabyFormSchema),
+    const form = useForm<z.infer<typeof ADD_BABY_FORM_SCHEMA>>({
+        resolver: zodResolver(ADD_BABY_FORM_SCHEMA),
         defaultValues: initialValues || {
             name: "",
             birthDate: new Date(),
         },
     })
 
-    function handleBabySubmit(values: z.infer<typeof AddBabyFormSchema>) {
+    function handleBabySubmit(values: z.infer<typeof ADD_BABY_FORM_SCHEMA>) {
         onSubmit(values);
         form.reset();
     }
@@ -85,7 +80,7 @@ function AddBabyForm({onSubmit, initialValues}: AddBabyFormProps) {
                     name="name"
                     render={({field}) => (
                         <FormItem>
-                            <FormLabel>Bebek adı</FormLabel>
+                            <FormLabel>Bebek Adı</FormLabel>
                             <FormControl>
                                 <Input placeholder="Bebek adını girin" {...field} />
                             </FormControl>
@@ -101,7 +96,7 @@ function AddBabyForm({onSubmit, initialValues}: AddBabyFormProps) {
                     name="birthDate"
                     render={({field}) => (
                         <FormItem className="flex flex-col">
-                            <FormLabel>Doğum tarihi</FormLabel>
+                            <FormLabel>Doğum Tarihi</FormLabel>
                             <Popover open={open} onOpenChange={setOpen}>
                                 <PopoverTrigger asChild>
                                     <FormControl>
@@ -146,14 +141,54 @@ function AddBabyForm({onSubmit, initialValues}: AddBabyFormProps) {
 }
 
 const VaccinationTimeline = () => {
-    const [vaccinationRecords, setVaccinationRecords] = useState<VaccinationRecord[]>(initialVaccinationRecords);
-    const [babyProfiles, setBabyProfiles] = useState<BabyProfile[]>(initialBabyProfiles);
+    const [vaccinationRecords, setVaccinationRecords] = useState<VaccinationRecord[]>([]);
+    const [babyProfiles, setBabyProfiles] = useState<BabyProfile[]>([]);
     const [selectedBaby, setSelectedBaby] = useState<BabyProfile | null>(null);
     const [selectedRecord, setSelectedRecord] = useState<VaccinationRecord | null>(null);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [isAddBabyDialogOpen, setIsAddBabyDialogOpen] = useState(false);
     const [vaccinationSchedule, setVaccinationSchedule] = useState<VaccinationScheduleEntry[]>([]);
     const [isAddBabyFormOpen, setIsAddBabyFormOpen] = useState(false);
+
+    useEffect(() => {
+        // Load data from localStorage on component mount
+        const storedVaccinationRecords = localStorage.getItem('vaccinationRecords');
+        if (storedVaccinationRecords) {
+            setVaccinationRecords(JSON.parse(storedVaccinationRecords).map((record: any) => ({
+                ...record,
+                date: new Date(record.date),
+            })));
+        }
+
+        const storedBabyProfiles = localStorage.getItem('babyProfiles');
+        if (storedBabyProfiles) {
+            setBabyProfiles(JSON.parse(storedBabyProfiles).map((profile: any) => ({
+                ...profile,
+                birthDate: new Date(profile.birthDate),
+            })));
+        }
+
+        const storedSelectedBaby = localStorage.getItem('selectedBaby');
+        if (storedSelectedBaby) {
+            setSelectedBaby(JSON.parse(storedSelectedBaby));
+        }
+    }, []);
+
+    useEffect(() => {
+        // Save data to localStorage whenever vaccinationRecords changes
+        localStorage.setItem('vaccinationRecords', JSON.stringify(vaccinationRecords));
+    }, [vaccinationRecords]);
+
+    useEffect(() => {
+        // Save data to localStorage whenever babyProfiles changes
+        localStorage.setItem('babyProfiles', JSON.stringify(babyProfiles));
+    }, [babyProfiles]);
+
+    useEffect(() => {
+        // Save data to localStorage whenever selectedBaby changes
+        localStorage.setItem('selectedBaby', JSON.stringify(selectedBaby));
+    }, [selectedBaby]);
+
 
     useEffect(() => {
         if (selectedBaby) {
@@ -216,7 +251,7 @@ const VaccinationTimeline = () => {
         setIsEditDialogOpen(true);
     };
 
-    const handleAddBaby = (newBabyValues: z.infer<typeof AddBabyFormSchema>) => {
+    const handleAddBaby = (newBabyValues: z.infer<typeof ADD_BABY_FORM_SCHEMA>) => {
         const newBaby: BabyProfile = {
             id: Date.now().toString(),
             name: newBabyValues.name,
@@ -227,10 +262,6 @@ const VaccinationTimeline = () => {
         setIsAddBabyDialogOpen(false);
         setIsAddBabyFormOpen(false); // Close the form after submission
     };
-
-    const addBaby = () => {
-        setIsAddBabyFormOpen(true);
-    }
 
     return (
         <div className="flex flex-col md:flex-row min-h-screen bg-background">
@@ -261,14 +292,16 @@ const VaccinationTimeline = () => {
                                             Aşıları takip etmek için yeni bir bebek profili oluşturun.
                                         </DialogDescription>
                                     </DialogHeader>
-                                    <AddBabyForm onSubmit={handleAddBaby} />
+                                    <AddBabyForm onSubmit={handleAddBaby}/>
                                 </DialogContent>
                             </Dialog>
-                            <Select onValueChange={(value) => {
-                                const baby = babyProfiles.find(profile => profile.id === value);
-                                setSelectedBaby(baby || null);
-                            }}
-                                    defaultValue={selectedBaby?.id}>
+                            <Select
+                                onValueChange={(value) => {
+                                    const baby = babyProfiles.find(profile => profile.id === value);
+                                    setSelectedBaby(baby || null);
+                                }}
+                                defaultValue={selectedBaby?.id}
+                            >
                                 <SelectTrigger className="w-[180px]">
                                     <SelectValue placeholder="Bebek Seç"/>
                                 </SelectTrigger>
