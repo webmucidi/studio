@@ -165,7 +165,19 @@ const VaccinationTimeline = () => {
 
         const storedSelectedBaby = localStorage.getItem('selectedBaby');
         if (storedSelectedBaby) {
-            setSelectedBaby(JSON.parse(storedSelectedBaby));
+            try {
+                const parsedBaby = JSON.parse(storedSelectedBaby);
+                if (parsedBaby === null) {
+                    setSelectedBaby(null);
+                } else {
+                    setSelectedBaby(parsedBaby);
+                }
+            } catch (e) {
+                console.error("Error parsing selectedBaby from localStorage", e);
+                setSelectedBaby(null);
+            }
+        } else {
+            setSelectedBaby(null);
         }
     }, []);
 
@@ -277,7 +289,7 @@ const VaccinationTimeline = () => {
 
     const ageInMonths = selectedBaby ? differenceInMonths(new Date(), selectedBaby.birthDate) : 0;
 
-    const calculateOverdueVaccinations = useCallback(() => {
+    const calculateOverdueVaccinations = () => {
         if (!selectedBaby) return [];
 
         // Filter the entire vaccination schedule to find entries that should have been administered by now
@@ -291,9 +303,9 @@ const VaccinationTimeline = () => {
                 record.vaccineName === vaccination.vaccineName && record.babyId === selectedBaby.id
             );
         });
-    }, [vaccinationSchedule, vaccinationRecords, selectedBaby, ageInMonths]);
+    };
 
-    const calculateUpcomingVaccinations = useCallback(() => {
+    const calculateUpcomingVaccinations = () => {
         if (!selectedBaby) return [];
 
         // Filter the vaccination schedule for entries that are in the future
@@ -307,12 +319,18 @@ const VaccinationTimeline = () => {
                 record.vaccineName === vaccination.vaccineName && record.babyId === selectedBaby.id
             );
         });
-    }, [vaccinationSchedule, vaccinationRecords, selectedBaby, ageInMonths]);
+    };
 
     useEffect(() => {
-        setOverdueVaccinationsList(calculateOverdueVaccinations());
-        setUpcomingVaccinationsList(calculateUpcomingVaccinations());
-    }, [calculateOverdueVaccinations, calculateUpcomingVaccinations, selectedBaby]);
+        if (selectedBaby) {
+            setOverdueVaccinationsList(calculateOverdueVaccinations());
+            setUpcomingVaccinationsList(calculateUpcomingVaccinations());
+        } else {
+            setOverdueVaccinationsList([]);
+            setUpcomingVaccinationsList([]);
+        }
+    }, [vaccinationSchedule, vaccinationRecords, selectedBaby, ageInMonths]);
+
 
     return (
         <div className="flex flex-col md:flex-row min-h-screen bg-background">
